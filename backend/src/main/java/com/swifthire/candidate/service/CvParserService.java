@@ -3,6 +3,7 @@ package com.swifthire.candidate.service;
 import com.swifthire.dictionary.model.KnownSkillsDictionary;
 import com.swifthire.dictionary.repository.KnownSkillsDictionaryRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Service;
@@ -25,7 +26,7 @@ public class CvParserService {
     private final KnownSkillsDictionaryRepository dictionaryRepository;
 
     public String extractTextFromPdf(MultipartFile file) throws IOException {
-        try (PDDocument doc = PDDocument.load(file.getInputStream())) {
+        try (PDDocument doc = Loader.loadPDF(file.getBytes())) {
             PDFTextStripper stripper = new PDFTextStripper();
             return stripper.getText(doc);
         }

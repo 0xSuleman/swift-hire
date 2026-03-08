@@ -21,6 +21,8 @@
         <java.version>17</java.version>
         <jjwt.version>0.12.5</jjwt.version>
         <pdfbox.version>3.0.2</pdfbox.version>
+        <!-- Override Spring Boot's managed Lombok to support Java 21+ -->
+        <lombok.version>1.18.36</lombok.version>
     </properties>
 
     <dependencies>
@@ -94,6 +96,16 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Spring Retry (for @Retryable in EmailService) -->
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aspects</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -109,6 +121,21 @@
 
     <build>
         <plugins>
+            <!-- Explicitly wire Lombok into the annotation processor so
+                 getters/setters/builders are generated before javac sees them -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

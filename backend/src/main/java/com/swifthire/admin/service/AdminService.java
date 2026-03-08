@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,29 +36,31 @@ public class AdminService {
             throw new IllegalArgumentException("No users found matching the criteria.");
         }
 
-        return users.stream().map(u -> Map.of(
-                "id", u.getId(),
-                "name", u.getName(),
-                "email", u.getEmail(),
-                "role", u.getRole().name(),
-                "status", u.getAccountStatus().name(),
-                "averageRating", u.getAverageRating()
-        )).toList();
+        return users.stream().map(u -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id",            u.getId());
+            m.put("name",          u.getName());
+            m.put("email",         u.getEmail());
+            m.put("role",          u.getRole().name());
+            m.put("status",        u.getAccountStatus().name());
+            m.put("averageRating", u.getAverageRating());
+            return m;
+        }).toList();
     }
 
     public Map<String, Object> getUserDetail(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
-        return Map.of(
-                "id", user.getId(),
-                "name", user.getName(),
-                "email", user.getEmail(),
-                "role", user.getRole().name(),
-                "status", user.getAccountStatus().name(),
-                "averageRating", user.getAverageRating(),
-                "totalRatings", user.getTotalRatings(),
-                "createdAt", user.getCreatedAt().toString()
-        );
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id",            user.getId());
+        m.put("name",          user.getName());
+        m.put("email",         user.getEmail());
+        m.put("role",          user.getRole().name());
+        m.put("status",        user.getAccountStatus().name());
+        m.put("averageRating", user.getAverageRating());
+        m.put("totalRatings",  user.getTotalRatings());
+        m.put("createdAt",     user.getCreatedAt().toString());
+        return m;
     }
 
     @Transactional

@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -57,12 +58,14 @@ public class ReviewService {
     public List<Map<String, Object>> getReviewsForUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
-        return reviewRepository.findByRatee(user).stream().map(r -> Map.of(
-                "rating", r.getRatingValue(),
-                "comment", r.getComment() != null ? r.getComment() : "",
-                "raterName", r.getRater().getName(),
-                "date", r.getCreatedAt().toString()
-        )).toList();
+        return reviewRepository.findByRatee(user).stream().map(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("rating",    r.getRatingValue());
+            m.put("comment",   r.getComment() != null ? r.getComment() : "");
+            m.put("raterName", r.getRater().getName());
+            m.put("date",      r.getCreatedAt().toString());
+            return m;
+        }).toList();
     }
 
     private void saveReview(User rater, User ratee, InterviewSlot slot, int rating, String comment) {
