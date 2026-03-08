@@ -1,0 +1,33 @@
+# Claude - never push
+.claude/
+
+# Maven
+backend/target/
+backend/*.log
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# IntelliJ / VS Code
+.idea/
+*.iml
+.vscode/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# Spring Boot
+*.jar
+*.war
+*.class
+
+# Environment / secrets — never commit
+.env
+application-prod.properties
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploaded CVs (user data — not for version control)
+backend/uploads/
