@@ -110,6 +110,41 @@ npm run dev
 
 ---
 
+## Running the App
+
+> **macOS Note:** Maven defaults to the Homebrew JDK. Always prefix with `JAVA_HOME` to force Java 17.
+
+### 1. Start MySQL
+```bash
+brew services start mysql
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS swift_hire;"
+```
+
+### 2. Start Backend
+```bash
+cd ~/Desktop/swift-hire/backend
+JAVA_HOME=/opt/homebrew/opt/openjdk@17 mvn spring-boot:run
+# API live at http://localhost:8080
+```
+
+### 3. Start Frontend
+```bash
+cd ~/Desktop/swift-hire/frontend
+npm install        # first time only
+npm run dev
+# UI live at http://localhost:5173
+```
+
+### Quick Test (confirm backend is up)
+```bash
+curl -s http://localhost:8080/api/auth/login \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"test"}'
+# Expected: {"success":false,"message":"Invalid email or password."}
+```
+
+---
+
 ## Key NFRs Implemented
 
 | NFR | Implementation |
