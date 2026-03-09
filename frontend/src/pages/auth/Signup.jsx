@@ -2,16 +2,12 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authApi } from '../../api/authApi'
 import AuthLayout from '../../components/common/AuthLayout'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { Label } from '../../components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
-import { Loader2, AlertCircle, UserRound, Building2 } from 'lucide-react'
-import { cn } from '../../lib/utils'
+import { Mail, Lock, User, Phone, Eye, EyeOff, Loader2, AlertCircle, UserRound, Building2 } from 'lucide-react'
 
 export default function Signup() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ name: '', email: '', password: '', phoneNo: '', role: 'CANDIDATE' })
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -29,115 +25,115 @@ export default function Signup() {
     }
   }
 
+  const inputRow = (label, key, type, placeholder, Icon, extra = {}) => (
+    <div>
+      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#9CA3AF', marginBottom: '8px', letterSpacing: '0.03em' }}>
+        {label}
+      </label>
+      <div style={{ position: 'relative' }}>
+        <Icon style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#4B5563' }} />
+        <input
+          className={`auth-input${extra.hasRight ? ' has-right' : ''}`}
+          type={type}
+          placeholder={placeholder}
+          value={form[key]}
+          required={extra.required !== false}
+          onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+        />
+        {extra.rightEl}
+      </div>
+    </div>
+  )
+
   return (
-    <AuthLayout>
-      <Card className="border-0 shadow-lg">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-2xl font-bold text-gray-900">Create an account</CardTitle>
-          <CardDescription>Join Swift Hire and start your journey</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+    <AuthLayout
+      headingTeal="Join the Platform"
+      headingWhite="Create Your Account"
+      tagline="Swift Hire connects top talent with great companies."
+    >
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-            {/* Role selector */}
-            <div className="space-y-2">
-              <Label>I am a</Label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { value: 'CANDIDATE', label: 'Job Seeker', icon: UserRound, desc: 'Find your next role' },
-                  { value: 'EMPLOYER', label: 'Employer', icon: Building2, desc: 'Hire top talent' },
-                ].map(({ value, label, icon: Icon, desc }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, role: value }))}
-                    className={cn(
-                      'flex flex-col items-start gap-1 rounded-lg border-2 p-3 text-left transition-colors',
-                      form.role === value
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                    )}
-                  >
-                    <Icon className={cn('h-5 w-5', form.role === value ? 'text-blue-600' : 'text-gray-400')} />
-                    <span className={cn('text-sm font-medium', form.role === value ? 'text-blue-700' : 'text-gray-700')}>
-                      {label}
-                    </span>
-                    <span className="text-xs text-gray-400">{desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* Role selector */}
+        <div>
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#9CA3AF', marginBottom: '8px', letterSpacing: '0.03em' }}>
+            I am joining as
+          </label>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {[
+              { value: 'CANDIDATE', label: 'Job Seeker', Icon: UserRound, desc: 'Find your next role' },
+              { value: 'EMPLOYER', label: 'Employer', Icon: Building2, desc: 'Hire top talent' },
+            ].map(({ value, label, Icon, desc }) => (
+              <button
+                key={value}
+                type="button"
+                className={`role-card${form.role === value ? ' active' : ''}`}
+                onClick={() => setForm(f => ({ ...f, role: value }))}
+              >
+                <Icon size={16} style={{ color: form.role === value ? '#2EE5B0' : '#4B5563', marginBottom: 6, transition: 'color 0.2s' }} />
+                <div style={{ fontSize: '0.825rem', fontWeight: 600, color: form.role === value ? '#2EE5B0' : '#D1D5DB', transition: 'color 0.2s' }}>
+                  {label}
+                </div>
+                <div style={{ fontSize: '0.7rem', color: '#4B5563', marginTop: 2 }}>{desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="John Doe"
-                value={form.name}
-                required
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              />
-            </div>
+        {inputRow('Full Name', 'name', 'text', 'John Doe', User)}
+        {inputRow('Email', 'email', 'email', 'you@example.com', Mail)}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={form.email}
-                required
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              />
-            </div>
+        {/* Password with toggle */}
+        <div>
+          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#9CA3AF', marginBottom: '8px', letterSpacing: '0.03em' }}>
+            Password
+          </label>
+          <div style={{ position: 'relative' }}>
+            <Lock style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#4B5563' }} />
+            <input
+              className="auth-input has-right"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Min. 8 characters"
+              value={form.password}
+              required
+              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#4B5563', display: 'flex', transition: 'color 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#9CA3AF'}
+              onMouseLeave={e => e.currentTarget.style.color = '#4B5563'}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Min. 8 characters"
-                value={form.password}
-                required
-                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-              />
-            </div>
+        {inputRow('Phone', 'phoneNo', 'tel', '+92 300 0000000', Phone, { required: false })}
 
-            <div className="space-y-2">
-              <Label htmlFor="phoneNo">
-                Phone <span className="text-gray-400 font-normal">(optional)</span>
-              </Label>
-              <Input
-                id="phoneNo"
-                type="tel"
-                placeholder="+92 300 0000000"
-                value={form.phoneNo}
-                onChange={e => setForm(f => ({ ...f, phoneNo: e.target.value }))}
-              />
-            </div>
+        {error && (
+          <div className="error-banner">
+            <AlertCircle size={15} style={{ flexShrink: 0 }} />
+            {error}
+          </div>
+        )}
 
-            {error && (
-              <div className="flex items-center gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                {error}
-              </div>
-            )}
+        <button type="submit" className="btn-teal" disabled={loading} style={{ marginTop: '4px' }}>
+          {loading
+            ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Creating account...
+              </span>
+            : 'Create Account'
+          }
+        </button>
+      </form>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {loading ? 'Creating account...' : 'Create Account'}
-            </Button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-gray-500">
-            Already have an account?{' '}
-            <Link to="/login" className="font-medium text-blue-600 hover:underline">
-              Sign in
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
+      <p style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.8rem', color: '#6B7280' }}>
+        Already have an account?{' '}
+        <Link to="/login" style={{ color: '#2EE5B0', fontWeight: 500, textDecoration: 'none' }}>
+          Sign In
+        </Link>
+      </p>
     </AuthLayout>
   )
 }

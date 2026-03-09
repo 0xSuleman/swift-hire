@@ -2,11 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { authApi } from '../../api/authApi'
 import AuthLayout from '../../components/common/AuthLayout'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { Label } from '../../components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
-import { Loader2, AlertCircle, MailCheck, ArrowLeft } from 'lucide-react'
+import { Mail, ArrowLeft, Loader2, AlertCircle, MailCheck } from 'lucide-react'
 
 export default function ResetPassword() {
   const [email, setEmail] = useState('')
@@ -29,69 +25,82 @@ export default function ResetPassword() {
   }
 
   return (
-    <AuthLayout>
-      <Card className="border-0 shadow-lg">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-2xl font-bold text-gray-900">Reset password</CardTitle>
-          <CardDescription>
-            {sent
-              ? 'Check your inbox for next steps'
-              : 'Enter your email and we\'ll send you a reset link'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {sent ? (
-            <div className="flex flex-col items-center gap-4 py-4 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
-                <MailCheck className="h-7 w-7 text-green-600" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-900">Email sent to <span className="text-blue-600">{email}</span></p>
-                <p className="text-sm text-gray-500">Follow the link in the email to reset your password. Check your spam folder if you don&apos;t see it.</p>
-              </div>
-              <Link to="/login">
-                <Button variant="outline" className="mt-2 gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Sign In
-                </Button>
-              </Link>
+    <AuthLayout
+      headingTeal="Account Recovery"
+      headingWhite="Reset Your Password"
+      tagline="We'll send a secure link to your inbox."
+    >
+      {sent ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '8px 0', textAlign: 'center' }}>
+          <div style={{
+            width: 60, height: 60, borderRadius: '50%',
+            background: 'rgba(46,229,176,0.1)',
+            border: '1px solid rgba(46,229,176,0.25)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 24px rgba(46,229,176,0.15)',
+          }}>
+            <MailCheck size={26} style={{ color: '#2EE5B0' }} />
+          </div>
+          <div>
+            <p style={{ fontSize: '0.9rem', fontWeight: 500, color: '#E8EAF0', marginBottom: 6 }}>
+              Reset link sent to{' '}
+              <span style={{ color: '#2EE5B0' }}>{email}</span>
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#6B7280', lineHeight: 1.6 }}>
+              Follow the link in your email to set a new password.<br />
+              Check your spam folder if you don&apos;t see it.
+            </p>
+          </div>
+          <Link to="/login" style={{ marginTop: 8 }}>
+            <button className="btn-ghost">
+              <ArrowLeft size={14} />
+              Back to Sign In
+            </button>
+          </Link>
+        </div>
+      ) : (
+        <form onSubmit={handleRequest} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#9CA3AF', marginBottom: '8px', letterSpacing: '0.03em' }}>
+              Email address
+            </label>
+            <div style={{ position: 'relative' }}>
+              <Mail style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#4B5563' }} />
+              <input
+                className="auth-input"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                required
+                onChange={e => setEmail(e.target.value)}
+              />
             </div>
-          ) : (
-            <form onSubmit={handleRequest} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  required
-                  onChange={e => setEmail(e.target.value)}
-                />
-              </div>
+          </div>
 
-              {error && (
-                <div className="flex items-center gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  {error}
-                </div>
-              )}
-
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {loading ? 'Sending...' : 'Send Reset Link'}
-              </Button>
-
-              <Link to="/login">
-                <Button variant="ghost" className="w-full gap-2 mt-1">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Sign In
-                </Button>
-              </Link>
-            </form>
+          {error && (
+            <div className="error-banner">
+              <AlertCircle size={15} style={{ flexShrink: 0 }} />
+              {error}
+            </div>
           )}
-        </CardContent>
-      </Card>
+
+          <button type="submit" className="btn-teal" disabled={loading}>
+            {loading
+              ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Sending...
+                </span>
+              : 'Send Reset Link'
+            }
+          </button>
+
+          <Link to="/login">
+            <button type="button" className="btn-ghost">
+              <ArrowLeft size={14} />
+              Back to Sign In
+            </button>
+          </Link>
+        </form>
+      )}
     </AuthLayout>
   )
 }

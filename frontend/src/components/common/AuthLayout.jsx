@@ -1,64 +1,108 @@
-import { Briefcase } from 'lucide-react'
-
-export default function AuthLayout({ children }) {
+export default function AuthLayout({ headingTeal, headingWhite, tagline, children }) {
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
-      {/* Branding panel */}
-      <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 p-12 text-white relative overflow-hidden">
-        {/* Background circles */}
-        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-white/5" />
-        <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-white/5 translate-x-1/3 translate-y-1/3" />
+    <div className="relative min-h-screen bg-[#0D0F11] flex flex-col items-center justify-center px-4 py-12 overflow-hidden">
 
-        {/* Logo */}
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm">
-            <Briefcase className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-2xl font-bold tracking-tight">Swift Hire</span>
-        </div>
+      {/* Ambient teal radial glow — top center */}
+      <div
+        className="animate-glow-pulse pointer-events-none select-none"
+        style={{
+          position: 'absolute',
+          top: '-80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '700px',
+          height: '420px',
+          background: 'radial-gradient(ellipse at center, rgba(46,229,176,0.13) 0%, transparent 68%)',
+          zIndex: 0,
+        }}
+      />
 
-        {/* Hero text */}
-        <div className="relative z-10 space-y-6">
-          <blockquote className="space-y-3">
-            <p className="text-3xl font-light leading-snug">
-              The smarter way to<br />
-              <span className="font-bold">hire and get hired.</span>
-            </p>
-            <p className="text-blue-200 text-base leading-relaxed">
-              AI-powered matching, automated scheduling, and real-time analytics — all in one platform built for modern recruitment.
-            </p>
-          </blockquote>
+      {/* Secondary warm glow — bottom right */}
+      <div
+        className="pointer-events-none select-none"
+        style={{
+          position: 'absolute',
+          bottom: '-100px',
+          right: '-100px',
+          width: '500px',
+          height: '500px',
+          background: 'radial-gradient(ellipse at center, rgba(99,102,241,0.07) 0%, transparent 65%)',
+          zIndex: 0,
+        }}
+      />
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/20">
-            {[
-              { value: '2×', label: 'Faster Hiring' },
-              { value: '95%', label: 'Match Accuracy' },
-              { value: '0 hrs', label: 'Manual Scheduling' },
-            ].map(({ value, label }) => (
-              <div key={label}>
-                <p className="text-2xl font-bold">{value}</p>
-                <p className="text-xs text-blue-200 mt-0.5">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Giant ghost background text */}
+      <div
+        className="pointer-events-none select-none"
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          fontSize: 'clamp(80px, 18vw, 200px)',
+          fontWeight: 900,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.025)',
+          whiteSpace: 'nowrap',
+          zIndex: 0,
+          lineHeight: 1,
+          textAlign: 'center',
+        }}
+      >
+        SWIFT<br />HIRE
       </div>
 
-      {/* Form panel */}
-      <div className="flex items-center justify-center p-8 bg-gray-50">
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600">
-              <Briefcase className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-900">Swift Hire</span>
-          </div>
+      {/* Main content */}
+      <div className="relative z-10 w-full max-w-md animate-fade-in">
 
+        {/* Hero heading */}
+        <div className="text-center mb-8">
+          {headingTeal && (
+            <p
+              className="text-sm font-semibold uppercase tracking-[0.25em] mb-2"
+              style={{ color: '#2EE5B0', textShadow: '0 0 30px rgba(46,229,176,0.6)' }}
+            >
+              {headingTeal}
+            </p>
+          )}
+          {headingWhite && (
+            <h1
+              className="font-black uppercase tracking-tight"
+              style={{
+                fontSize: 'clamp(28px, 6vw, 42px)',
+                background: 'linear-gradient(180deg, #FFFFFF 30%, rgba(255,255,255,0.55) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                lineHeight: 1.1,
+              }}
+            >
+              {headingWhite}
+            </h1>
+          )}
+          {tagline && (
+            <p className="mt-3 text-sm" style={{ color: '#6B7280' }}>{tagline}</p>
+          )}
+        </div>
+
+        {/* Card */}
+        <div
+          className="animate-slide-up-delay rounded-2xl p-7"
+          style={{
+            background: '#13171B',
+            border: '1px solid rgba(255,255,255,0.07)',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
+          }}
+        >
           {children}
         </div>
       </div>
+
+      {/* Footer */}
+      <p className="relative z-10 mt-10 text-xs" style={{ color: '#374151' }}>
+        © 2026 Swift Hire. All Rights Reserved.
+      </p>
     </div>
   )
 }
