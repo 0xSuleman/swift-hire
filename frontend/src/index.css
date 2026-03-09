@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 0 0% 5%;
+    --foreground: 0 0% 93%;
+    --card: 210 10% 10%;
+    --card-foreground: 0 0% 93%;
+    --border: 210 10% 14%;
+    --input: 210 10% 8%;
+    --ring: 165 70% 55%;
+    --primary: 165 70% 55%;
+    --primary-foreground: 165 70% 10%;
+    --muted: 210 10% 40%;
+    --muted-foreground: 210 8% 55%;
+    --accent: 165 70% 55%;
+    --destructive: 0 72% 51%;
+    --radius: 0.75rem;
+  }
+
+  * { border-color: hsl(var(--border)); box-sizing: border-box; }
+
+  body {
+    background: #0D0F11;
+    color: #E8EAF0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50%       { opacity: 0.55; transform: scale(1.04); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+
+/* ── Utility classes ───────────────────────────────────────────── */
+.animate-fade-in  { animation: fadeIn  0.5s ease forwards; }
+.animate-slide-up { animation: slideUp 0.55s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-slide-up-delay { animation: slideUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.12s both; }
+.animate-glow-pulse { animation: glowPulse 4s ease-in-out infinite; }
+
+/* ── Input glow on focus ───────────────────────────────────────── */
+.auth-input {
+  background: #0A0C0E;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0.75rem;
+  color: #E8EAF0;
+  padding: 0 1rem 0 2.75rem;
+  height: 52px;
+  width: 100%;
+  font-size: 0.9rem;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  outline: none;
+}
+
+.auth-input::placeholder { color: #4B5563; }
+
+.auth-input:focus {
+  border-color: rgba(46,229,176,0.5);
+  box-shadow: 0 0 0 3px rgba(46,229,176,0.08), inset 0 0 0 1px rgba(46,229,176,0.15);
+}
+
+.auth-input.has-right { padding-right: 3rem; }
+
+/* ── Teal pill button ──────────────────────────────────────────── */
+.btn-teal {
+  width: 100%;
+  height: 52px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #2ee5b0, #00c9a7);
+  color: #052015;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 0 20px rgba(46,229,176,0.2);
+}
+
+.btn-teal:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 0 32px rgba(46,229,176,0.35);
+}
+
+.btn-teal:active:not(:disabled) { transform: translateY(0); filter: brightness(0.97); }
+
+.btn-teal:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Ghost outline button ──────────────────────────────────────── */
+.btn-ghost {
+  width: 100%;
+  height: 44px;
+  border-radius: 9999px;
+  background: transparent;
+  color: #9CA3AF;
+  font-size: 0.875rem;
+  border: 1px solid rgba(255,255,255,0.1);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+
+.btn-ghost:hover { border-color: rgba(255,255,255,0.2); color: #E8EAF0; background: rgba(255,255,255,0.04); }
+
+/* ── Role selector cards ───────────────────────────────────────── */
+.role-card {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  background: #0A0C0E;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.role-card:hover { border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.03); }
+
+.role-card.active {
+  border-color: rgba(46,229,176,0.5);
+  background: rgba(46,229,176,0.06);
+  box-shadow: 0 0 0 1px rgba(46,229,176,0.1);
+}
+
+/* ── Error banner ──────────────────────────────────────────────── */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: #FCA5A5;
+  font-size: 0.8125rem;
+  animation: slideDown 0.25s ease forwards;
+}
