@@ -2,6 +2,12 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authApi } from '../../api/authApi'
 import { useAuth } from '../../context/AuthContext'
+import AuthLayout from '../../components/common/AuthLayout'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { Label } from '../../components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Loader2, AlertCircle } from 'lucide-react'
 
 export default function Login() {
   const { login } = useAuth()
@@ -28,27 +34,67 @@ export default function Login() {
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: '80px auto', padding: 24 }}>
-      <h1>Swift Hire</h1>
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email" placeholder="Email" value={form.email} required
-          onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-          style={{ display: 'block', width: '100%', marginBottom: 12, padding: 8 }}
-        />
-        <input
-          type="password" placeholder="Password" value={form.password} required
-          onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-          style={{ display: 'block', width: '100%', marginBottom: 12, padding: 8 }}
-        />
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" disabled={loading} style={{ width: '100%', padding: 10 }}>
-          {loading ? 'Logging in...' : 'Login'}
-        </button>
-      </form>
-      <p>Don't have an account? <Link to="/signup">Sign Up</Link></p>
-      <p><Link to="/reset-password">Forgot password?</Link></p>
-    </div>
+    <AuthLayout>
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="space-y-1 pb-4">
+          <CardTitle className="text-2xl font-bold text-gray-900">Welcome back</CardTitle>
+          <CardDescription>Sign in to your Swift Hire account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={form.email}
+                required
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  to="/reset-password"
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={form.password}
+                required
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading ? 'Signing in...' : 'Sign In'}
+            </Button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Don&apos;t have an account?{' '}
+            <Link to="/signup" className="font-medium text-blue-600 hover:underline">
+              Create one
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
+    </AuthLayout>
   )
 }
