@@ -42,6 +42,7 @@ function Section({ title, children }) {
 
 export default function Profile() {
   const [profile, setProfile]   = useState(null)
+  const [fetchError, setFetchError] = useState(false)
   const [file, setFile]         = useState(null)
   const [prefs, setPrefs]       = useState({ location: '', shift: '', workType: '' })
   const [toast, setToast]       = useState({ msg: '', type: 'ok' })
@@ -63,7 +64,7 @@ export default function Profile() {
           workType: res.data.data.workType          || '',
         })
       })
-      .catch(() => notify('Failed to load profile.', 'err'))
+      .catch(() => { notify('Failed to load profile.', 'err'); setFetchError(true) })
   }, [])
 
   const uploadCv = async e => {
@@ -96,11 +97,19 @@ export default function Profile() {
     }
   }
 
-  if (!profile) return (
+  if (!profile && !fetchError) return (
     <AppLayout>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#4B5563', gap: 10 }}>
         <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
         Loading profile...
+      </div>
+    </AppLayout>
+  )
+
+  if (fetchError) return (
+    <AppLayout>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#4B5563', gap: 12 }}>
+        <p style={{ color: '#FCA5A5', fontSize: '0.9rem' }}>Failed to load profile. Please log out and log back in.</p>
       </div>
     </AppLayout>
   )
