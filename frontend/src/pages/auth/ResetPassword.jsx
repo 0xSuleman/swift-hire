@@ -51,7 +51,7 @@ export default function ResetPassword() {
               Check your spam folder if you don&apos;t see it.
             </p>
           </div>
-          <Link to="/login" style={{ marginTop: 8 }}>
+          <Link to="/login" style={{ marginTop: 8, width: '100%', display: 'block' }}>
             <button className="btn-ghost">
               <ArrowLeft size={14} />
               Back to Sign In
