@@ -48,8 +48,10 @@ public class PromptEngineService {
 
     private Set<String> matchCategory(String text, KnownSkillsDictionary.SkillCategory category) {
         return dictionaryRepository.findByCategory(category).stream()
-                .filter(e -> text.matches(".*\\b" +
-                        Pattern.quote(e.getSkillName().toLowerCase()) + "\\b.*"))
+                .filter(e -> Pattern.compile(
+                        "\\b" + Pattern.quote(e.getSkillName().toLowerCase()) + "\\b",
+                        Pattern.CASE_INSENSITIVE
+                ).matcher(text).find())
                 .map(KnownSkillsDictionary::getSkillName)
                 .collect(Collectors.toSet());
     }

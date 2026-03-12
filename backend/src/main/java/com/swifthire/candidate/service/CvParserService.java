@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -45,8 +46,12 @@ public class CvParserService {
         Set<String> matched = allSkills.stream()
                 .filter(entry -> {
                     String skill = entry.getSkillName().toLowerCase();
-                    // Word-boundary match to avoid "java" matching "javascript" incorrectly
-                    return textLower.matches(".*\\b" + java.util.regex.Pattern.quote(skill) + "\\b.*");
+                    // Use find() not matches() — matches() requires the ENTIRE string to match,
+                    // which fails on multi-line PDF text since . doesn't match \n by default.
+                    return Pattern.compile(
+                            "\\b" + Pattern.quote(skill) + "\\b",
+                            Pattern.CASE_INSENSITIVE
+                    ).matcher(textLower).find();
                 })
                 .map(KnownSkillsDictionary::getSkillName)
                 .collect(Collectors.toSet());
