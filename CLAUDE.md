@@ -47,3 +47,14 @@ It contains hard rules to follow and a running log of past mistakes to never rep
 
 - [2026-03-08] — `AdminService.generateReport()` returns a placeholder map. Must be
   implemented by BE1 before integration testing.
+
+- [2026-03-12] — `String.matches()` in Java requires the ENTIRE string to match the regex.
+  Multi-line PDF text always returned empty skills because `.` doesn't match `\n`.
+  Always use `Pattern.compile(..., CASE_INSENSITIVE).matcher(text).find()` for substring search.
+
+- [2026-03-12] — `InterviewWindow` was created in-memory and passed to `ScheduleService`
+  without being persisted. Always save JPA entities before referencing them in child entities.
+
+- [2026-03-12] — A stale JWT after a backend restart causes Spring Security to return 403
+  with its own error format (no `message` field), not our `ApiResponse`. Frontend fallback
+  shows generic message. Fix: always log out and back in after a backend restart during testing.
