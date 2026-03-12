@@ -3,7 +3,11 @@ package com.swifthire.scheduling.controller;
 import com.swifthire.common.dto.ApiResponse;
 import com.swifthire.scheduling.model.InterviewSlot;
 import com.swifthire.scheduling.model.InterviewWindow;
+import com.swifthire.scheduling.repository.InterviewWindowRepository;
 import com.swifthire.scheduling.service.ScheduleService;
+import com.swifthire.user.model.Employer;
+import com.swifthire.user.repository.EmployerRepository;
+import com.swifthire.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,6 +25,9 @@ import java.util.Map;
 public class ScheduleController {
 
     private final ScheduleService scheduleService;
+    private final InterviewWindowRepository windowRepository;
+    private final EmployerRepository employerRepository;
+    private final UserRepository userRepository;
 
     // UC-04: Auto-Schedule Batch
     @PostMapping("/batch")
@@ -34,10 +41,20 @@ public class ScheduleController {
         List<Long> candidateIds = ((List<Object>) body.get("candidateIds"))
                 .stream().map(o -> Long.valueOf(o.toString())).toList();
 
-        InterviewWindow window = new InterviewWindow();
-        window.setDate(LocalDate.parse(body.get("date").toString()));
-        window.setStartTime(LocalTime.parse(body.get("startTime").toString()));
-        window.setEndTime(LocalTime.parse(body.get("endTime").toString()));
+        // Lookup employer for the window
+        var user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+        Employer employer = employerRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Employer not found."));
+
+        // Persist the window first — fixes TransientPropertyValueException (Bug #2)
+        InterviewWindow window = InterviewWindow.builder()
+                .employer(employer)
+                .date(LocalDate.parse(body.get("date").toString()))
+                .startTime(LocalTime.parse(body.get("startTime").toString()))
+                .endTime(LocalTime.parse(body.get("endTime").toString()))
+                .build();
+        windowRepository.save(window);
 
         List<InterviewSlot> slots = scheduleService.scheduleBatch(jobPostingId, candidateIds, window);
 
