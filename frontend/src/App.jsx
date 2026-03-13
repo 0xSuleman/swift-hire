@@ -6,6 +6,9 @@ import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
 import ResetPassword from './pages/auth/ResetPassword'
 
+// Shared
+import MyInterviews from './pages/shared/MyInterviews'
+
 // Candidate
 import CandidateDashboard from './pages/candidate/CandidateDashboard'
 import Profile from './pages/candidate/Profile'
@@ -40,6 +43,7 @@ export default function App() {
         <Route path="/candidate"            element={<CandidateDashboard />} />
         <Route path="/candidate/profile"    element={<Profile />} />
         <Route path="/candidate/jobs"       element={<JobPostings />} />
+        <Route path="/candidate/interviews"  element={<MyInterviews />} />
         <Route path="/candidate/rate/:slotId" element={<RateEmployer />} />
         <Route path="/candidate/analytics"  element={<CandidateAnalytics />} />
       </Route>
@@ -53,6 +57,7 @@ export default function App() {
         <Route path="/employer/rate/:slotId"       element={<RateCandidate />} />
         <Route path="/employer/profile"            element={<EmployerProfile />} />
         <Route path="/employer/analytics"          element={<EmployerAnalytics />} />
+        <Route path="/employer/interviews"         element={<MyInterviews />} />
       </Route>
 
       {/* Admin */}
