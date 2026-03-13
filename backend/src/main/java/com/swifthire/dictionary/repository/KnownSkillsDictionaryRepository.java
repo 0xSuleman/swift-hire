@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface KnownSkillsDictionaryRepository extends JpaRepository<KnownSkillsDictionary, Long> {
     List<KnownSkillsDictionary> findByCategory(SkillCategory category);
     Optional<KnownSkillsDictionary> findBySkillNameIgnoreCase(String skillName);
+    List<KnownSkillsDictionary> findBySkillNameIn(List<String> skillNames);
 }

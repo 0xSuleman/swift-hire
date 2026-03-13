@@ -5,6 +5,7 @@ import com.swifthire.auth.dto.LoginResponse;
 import com.swifthire.auth.dto.SignupRequest;
 import com.swifthire.auth.util.JwtUtil;
 import com.swifthire.user.model.*;
+import com.swifthire.user.repository.AdminRepository;
 import com.swifthire.user.repository.CandidateRepository;
 import com.swifthire.user.repository.EmployerRepository;
 import com.swifthire.user.repository.UserRepository;
@@ -24,6 +25,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final CandidateRepository candidateRepository;
     private final EmployerRepository employerRepository;
+    private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
@@ -52,8 +54,13 @@ public class AuthService {
 
         if (request.getRole() == Role.CANDIDATE) {
             candidateRepository.save(Candidate.builder().user(user).build());
-        } else {
+        } else if (request.getRole() == Role.EMPLOYER) {
             employerRepository.save(Employer.builder().user(user).build());
+        } else if (request.getRole() == Role.ADMIN) {
+            // ACD: Admin extends User — persist Admin row (JOINED table)
+            Admin admin = new Admin();
+            admin.setId(user.getId());
+            adminRepository.save(admin);
         }
     }
 

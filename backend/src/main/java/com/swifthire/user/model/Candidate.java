@@ -30,4 +30,8 @@ public class Candidate {
 
     @Builder.Default
     private long profileViews = 0L;
+
+    // ACD attribute — derived from MatchScore (contextual per-job, not persisted)
+    @Transient
+    private double atsScore;
 }
