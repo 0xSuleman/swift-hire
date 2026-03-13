@@ -1,6 +1,7 @@
 package com.swifthire.job.service;
 
 import com.swifthire.common.exception.ResourceNotFoundException;
+import com.swifthire.dictionary.repository.KnownSkillsDictionaryRepository;
 import com.swifthire.job.model.HiringPrompt;
 import com.swifthire.job.model.JobPosting;
 import com.swifthire.job.model.MatchScore;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ public class JobService {
     private final CandidateRepository candidateRepository;
     private final PromptEngineService promptEngineService;
     private final AtsScoreService atsScoreService;
+    private final KnownSkillsDictionaryRepository dictionaryRepository;
 
     @Transactional
     public Map<String, Object> processHiringPrompt(String email, String rawPrompt) {
@@ -48,6 +51,11 @@ public class JobService {
                 .shift(parsed.shift())
                 .experienceYears(parsed.experienceYears())
                 .build();
+        jobPostingRepository.save(job);
+
+        // ACD: link matched KnownSkillsDictionary entities (JobPosting Uses KnownSkillsDictionary)
+        List<String> tagList = Arrays.asList(parsed.requiredSkillsTag().split(","));
+        job.setSkillTags(dictionaryRepository.findBySkillNameIn(tagList));
         jobPostingRepository.save(job);
 
         // Run ATS scoring immediately

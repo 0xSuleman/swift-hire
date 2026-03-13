@@ -5,6 +5,8 @@ import com.swifthire.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -41,13 +43,21 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok("User status updated successfully.", null));
     }
 
-    // UC-14: System reports
+    // UC-14: Generate system report (ACD: generateGraphicalReport)
     @GetMapping("/reports")
     public ResponseEntity<ApiResponse<Object>> getReport(
+            @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam String category,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(required = false) String userType) {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.generateReport(category, from, to, userType)));
+        return ResponseEntity.ok(ApiResponse.ok(
+                adminService.generateReport(category, from, to, userType, userDetails.getUsername())));
+    }
+
+    // UC-14: View history of generated reports (ACD: Admin Views GraphicalReport 1:0..*)
+    @GetMapping("/reports/history")
+    public ResponseEntity<ApiResponse<Object>> getReportHistory() {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getReportHistory()));
     }
 }
