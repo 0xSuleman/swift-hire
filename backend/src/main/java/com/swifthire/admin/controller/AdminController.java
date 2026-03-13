@@ -3,6 +3,8 @@ package com.swifthire.admin.controller;
 import com.swifthire.admin.service.AdminService;
 import com.swifthire.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -53,6 +55,21 @@ public class AdminController {
             @RequestParam(required = false) String userType) {
         return ResponseEntity.ok(ApiResponse.ok(
                 adminService.generateReport(category, from, to, userType, userDetails.getUsername())));
+    }
+
+    // UC-14 steps 13-14: Export report as CSV file download
+    @GetMapping("/reports/export")
+    public ResponseEntity<byte[]> exportReport(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam String category,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        String csv = adminService.exportReportCsv(category, from, to, userDetails.getUsername());
+        byte[] bytes = csv.getBytes();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv"));
+        headers.setContentDispositionFormData("attachment", "report-" + category + ".csv");
+        return ResponseEntity.ok().headers(headers).body(bytes);
     }
 
     // UC-14: View history of generated reports (ACD: Admin Views GraphicalReport 1:0..*)

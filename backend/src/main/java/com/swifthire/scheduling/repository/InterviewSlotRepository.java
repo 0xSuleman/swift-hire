@@ -19,7 +19,7 @@ public interface InterviewSlotRepository extends JpaRepository<InterviewSlot, Lo
 
     // For cron reminder job (UC-15): find slots where interview is approaching
     @Query("SELECT s FROM InterviewSlot s WHERE s.startTime BETWEEN :from AND :to " +
-           "AND s.status = 'PENDING'")
+           "AND s.status IN ('PENDING', 'CONFIRMED')")
     List<InterviewSlot> findSlotsBetween(LocalDateTime from, LocalDateTime to);
 
     List<InterviewSlot> findByJobPostingId(Long jobPostingId);

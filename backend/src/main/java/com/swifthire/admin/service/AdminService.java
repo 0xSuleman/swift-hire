@@ -157,6 +157,17 @@ public class AdminService {
         return reportData;
     }
 
+    // UC-14 steps 13-14: Export report as CSV download
+    public String exportReportCsv(String category, String from, String to, String adminEmail) {
+        Map<String, Object> data = generateReport(category, from, to, null, adminEmail);
+        StringBuilder csv = new StringBuilder();
+        csv.append("key,value\n");
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            csv.append(entry.getKey()).append(',').append(entry.getValue()).append('\n');
+        }
+        return csv.toString();
+    }
+
     // UC-14: list previously generated reports
     public List<Map<String, Object>> getReportHistory() {
         return graphicalReportRepository.findAllByOrderByGeneratedAtDesc().stream().map(r -> {
