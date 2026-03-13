@@ -1,6 +1,6 @@
 # CONTEXT.md — Swift Hire Quick Reference
 > Load this at the start of every new session to skip codebase re-exploration.
-> Updated: 2026-03-13
+> Updated: 2026-03-13 (session 2)
 
 ---
 
@@ -125,8 +125,8 @@ unique: (rater_id, interview_slot_id)
 | POST | `/signup` | UC-06 | role: CANDIDATE or EMPLOYER only |
 | POST | `/login` | UC-01 | returns JWT + userId/name/email/role |
 | POST | `/logout` | UC-07 | client-side JWT discard |
-| POST | `/reset-password-request` | NFR 3.8.3 | **TODO** |
-| POST | `/reset-password` | NFR 3.8.3 | **TODO** |
+| POST | `/reset-password-request` | NFR 3.8.3 | ✅ generates UUID token, emails link (1h expiry) |
+| POST | `/reset-password` | NFR 3.8.3 | ✅ validates token, hashes new password, resets lock |
 
 ### `/api/candidate` (@PreAuthorize CANDIDATE)
 | Method | Path | UC |
@@ -156,7 +156,7 @@ unique: (rater_id, interview_slot_id)
 | Method | Path | UC | Notes |
 |--------|------|----|-------|
 | POST | `/batch` | UC-04 | EMPLOYER only |
-| GET | `/my-interviews` | — | **TODO** — needs to return slots for logged-in user |
+| GET | `/my-interviews` | — | ✅ returns slots for logged-in user (role-aware: CANDIDATE or EMPLOYER) |
 
 ### `/api/reviews`
 | Method | Path | UC |
@@ -178,7 +178,7 @@ unique: (rater_id, interview_slot_id)
 | Method | Path | UC | Notes |
 |--------|------|----|-------|
 | GET | `/candidate` | UC-16 | returns profileViews, interviewCount, avgRating, skillsCount |
-| GET | `/employer` | UC-16 | **TODO** — only returns avgRating/totalRatings; missing time-to-hire, acceptance rate |
+| GET | `/employer` | UC-16 | ✅ returns timeToHire, acceptanceRate, avgRating, per-job breakdown |
 
 ---
 
@@ -198,17 +198,39 @@ unique: (rater_id, interview_slot_id)
 | UC-11 | View Job Postings (ranked) | ✅ Done |
 | UC-12 | Rate Employer | ✅ Done |
 | UC-13 | Manage Users | ✅ Done |
-| UC-14 | View System Reports | ⚠️ FE done, BE TODO |
+| UC-14 | View System Reports | ✅ Done |
 | UC-15 | Send Interview Reminders (cron) | ✅ Done |
-| UC-16 | View Hiring Analytics | ⚠️ Candidate done, Employer partial |
+| UC-16 | View Hiring Analytics | ✅ Done |
 
 ---
 
 ## Remaining Backend TODOs
-1. **`ScheduleController.getMyInterviews()`** — return slots for logged-in candidate/employer (CRITICAL)
-2. **`AuthService.requestPasswordReset()` + `resetPassword()`** — fully empty (HIGH)
-3. **`AdminService.generateReport()`** — returns placeholder string (HIGH — fixed by GraphicalReport implementation)
-4. **`AnalyticsService.getEmployerAnalytics()`** — missing time-to-hire, acceptance rate (MEDIUM)
+All 4 original TODOs are now implemented. ✅
+1. ✅ `ScheduleController.getMyInterviews()` — implemented, returns slots for both roles
+2. ✅ `AuthService.requestPasswordReset()` + `resetPassword()` — fully implemented with token, expiry, email
+3. ✅ `AdminService.generateReport()` — real aggregation across 4 categories, persisted as GraphicalReport
+4. ✅ `AnalyticsService.getEmployerAnalytics()` — time-to-hire, acceptance rate, per-job breakdown
+
+---
+
+## What's Left
+
+### Frontend
+- **EmployerAnalytics charts** — `EmployerAnalytics.jsx` currently shows "Coming soon" placeholder. Needs Chart.js integration to display timeToHire, acceptanceRate, per-job breakdown (data is available from `/api/analytics/employer`)
+- **MyInterviews** — page exists and works; `shared/` folder added, routes + nav wired for both roles ✅
+
+### Backend
+- Nothing remaining. All 17 UCs + NFRs are implemented.
+
+### Email / SMTP
+- Gmail credentials hardcoded in `application.properties` for local dev: `hmehmood180@gmail.com`
+- App password: `nucb ztif hfha kjxo`
+- **Do NOT commit `application.properties` with credentials to GitHub**
+- `@EnableAsync` is on `SwiftHireApplication` — all email methods are truly async
+
+### Deliverable-2
+- DCD (Design Class Diagram) work pending — to be done after all backend is complete and tested
+- Branch strategy: merge `backend-fixes` → `main` first, then create new branch for D2 work
 
 ---
 
@@ -240,8 +262,11 @@ All 4 gaps have been closed in implementation:
 - Clears old MatchScores for the job before saving new ones
 
 ### ScheduleService
-- Divides window into 45-min slots, assigns top-N candidates, generates Calendly links
+- Divides window into 45-min slots, assigns top-N candidates
+- Generates Jitsi Meet links: `https://meet.jit.si/swift-hire-<12-char-uid>` (no API key needed)
+- Emails BOTH candidate AND employer via EmailService on slot creation
 - Triggers EmailService (async, retryable, 3 attempts, 2s backoff)
+- NOTE: DB column is still named `calendlyLink` — just a string, no schema change needed
 
 ### ReminderScheduler
 - Cron queries slots where `reminderSentXd=false` AND date approaching
@@ -251,10 +276,11 @@ All 4 gaps have been closed in implementation:
 
 ## Frontend Pages
 ```
-pages/auth/        Login, Signup, ResetPassword
+pages/auth/        Login, Signup, ResetPassword (handles both request + token flows via ?token= param)
+pages/shared/      MyInterviews (role-aware: used by both /candidate/interviews and /employer/interviews)
 pages/candidate/   CandidateDashboard, Profile, JobPostings, CandidateAnalytics, RateEmployer
 pages/employer/    EmployerDashboard, EmployerProfile, HiringPrompt, RecommendedCandidates,
-                   AutoSchedule, EmployerAnalytics, RateCandidate
+                   AutoSchedule, EmployerAnalytics (charts TODO), RateCandidate
 pages/admin/       AdminDashboard, ManageUsers, SystemReports
 ```
 JWT stored in localStorage as `sh_token`. Axios instance in `api/axios.js` adds Bearer header.
