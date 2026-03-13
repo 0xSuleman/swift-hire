@@ -1,6 +1,6 @@
 # CONTEXT.md — Swift Hire Quick Reference
 > Load this at the start of every new session to skip codebase re-exploration.
-> Updated: 2026-03-13 (session 2)
+> Updated: 2026-03-13 (session 3)
 
 ---
 
@@ -32,8 +32,8 @@
 - **Dual-Driven Marketplace**: Candidate pushes CV → system matches to Jobs; Employer types Prompt → system ranks Candidates
 - **Custom NLP**: Pure Regex + KnownSkillsDictionary (NO external AI API)
 - **ATS Score**: (matched_tags / required_tags) × 100 + location bonus (+5) + shift bonus (+5), max 100
-- **Auto-Scheduling**: employer defines window (date + start/end time) → system slots top-N candidates in 45-min blocks → async email with Calendly link
-- **Cron Reminders**: 7d, 3d, 1d before interview; dedup via `reminderSent*` flags on InterviewSlot
+- **Auto-Scheduling**: employer defines window (date + start/end time) → system slots top-N candidates in 45-min blocks → async email with Jitsi Meet link
+- **Cron Reminders**: 7d, 3d, 1d before interview; dedup via `reminderSent*` flags; `@Transactional` on scheduler; CONFIRMED+PENDING slots included
 - **Auth**: JWT (JJWT 0.12.5), 24h expiry, roles: ADMIN / EMPLOYER / CANDIDATE
 
 ---
@@ -43,7 +43,7 @@
 com.swifthire/
 ├── auth/           controller/AuthController, service/AuthService, filter/JwtAuthFilter, util/JwtUtil
 │                   dto/ LoginRequest, LoginResponse, SignupRequest
-├── config/         SecurityConfig, CorsConfig
+├── config/         SecurityConfig, CorsConfig (includes PATCH in allowedMethods)
 ├── common/         dto/ApiResponse, exception/GlobalExceptionHandler, ResourceNotFoundException
 ├── user/           model/ User, Candidate, Employer, Role(enum), AccountStatus(enum)
 │                   repository/ UserRepository, CandidateRepository, EmployerRepository
@@ -54,12 +54,15 @@ com.swifthire/
 │                   controller/ScheduleController, service/ScheduleService
 │                   repository/ InterviewWindowRepository, InterviewSlotRepository
 ├── automation/     service/EmailService (@Async @Retryable)
-│                   scheduler/ReminderScheduler (cron)
+│                   scheduler/ReminderScheduler (@Transactional cron, logs to NotificationLog)
+│                   model/NotificationLog, repository/NotificationLogRepository
 ├── review/         model/Review, controller/ReviewController, service/ReviewService
 │                   repository/ReviewRepository
 ├── admin/          model/GraphicalReport, controller/AdminController, service/AdminService
 │                   repository/GraphicalReportRepository
 ├── analytics/      controller/AnalyticsController, service/AnalyticsService
+├── candidate/      controller/CandidateController, service/CandidateService, CvParserService
+├── employer/       controller/EmployerController, service/EmployerService
 ├── dictionary/     model/KnownSkillsDictionary(+SkillCategory enum), DataSeeder (seeds 74 entries)
 │                   repository/KnownSkillsDictionaryRepository
 └── SwiftHireApplication.java
@@ -112,6 +115,10 @@ unique: (rater_id, interview_slot_id)
 ### GraphicalReport (`graphical_reports` table)
 `id, reportType(users/jobs/ratings/analytics), dateRangeFrom, dateRangeTo, generatedAt, data(TEXT JSON), generatedBy(ManyToOne→User)`
 
+### NotificationLog (`notification_logs` table)
+`id, recipientEmail, eventType(REMINDER_7D/REMINDER_3D/REMINDER_1D/INVITATION), interviewSlotId, status(SENT/FAILED), errorMessage(TEXT), sentAt`
+— Added session 3 for NFR 3.7.3
+
 ### KnownSkillsDictionary (`known_skills_dictionary` table)
 `id, skillName(unique), category(SKILL/LOCATION/SHIFT)` — 74 entries seeded
 
@@ -125,8 +132,8 @@ unique: (rater_id, interview_slot_id)
 | POST | `/signup` | UC-06 | role: CANDIDATE or EMPLOYER only |
 | POST | `/login` | UC-01 | returns JWT + userId/name/email/role |
 | POST | `/logout` | UC-07 | client-side JWT discard |
-| POST | `/reset-password-request` | NFR 3.8.3 | ✅ generates UUID token, emails link (1h expiry) |
-| POST | `/reset-password` | NFR 3.8.3 | ✅ validates token, hashes new password, resets lock |
+| POST | `/reset-password-request` | NFR 3.8.3 | generates UUID token, emails link (1h expiry) |
+| POST | `/reset-password` | NFR 3.8.3 | validates token, hashes new password, resets lock |
 
 ### `/api/candidate` (@PreAuthorize CANDIDATE)
 | Method | Path | UC |
@@ -150,13 +157,14 @@ unique: (rater_id, interview_slot_id)
 | GET | `/{jobId}/candidates` | UC-03 |
 | GET | `/` | list employer's postings |
 | PUT | `/{jobId}` | NFR 3.9.1 |
-| DELETE | `/{jobId}` | NFR 3.9.1 |
+| DELETE | `/{jobId}` | NFR 3.9.1 (soft-delete → ARCHIVED) |
 
 ### `/api/schedule`
 | Method | Path | UC | Notes |
 |--------|------|----|-------|
 | POST | `/batch` | UC-04 | EMPLOYER only |
-| GET | `/my-interviews` | — | ✅ returns slots for logged-in user (role-aware: CANDIDATE or EMPLOYER) |
+| GET | `/my-interviews` | — | role-aware: returns slots for CANDIDATE or EMPLOYER |
+| PATCH | `/slots/{slotId}/status` | — | CANDIDATE: confirm/cancel; EMPLOYER: complete/cancel |
 
 ### `/api/reviews`
 | Method | Path | UC |
@@ -172,17 +180,18 @@ unique: (rater_id, interview_slot_id)
 | GET | `/users/{userId}` | UC-13 |
 | PUT | `/users/{userId}/status` | UC-13 |
 | GET | `/reports` | UC-14 |
+| GET | `/reports/export` | UC-14 | returns CSV file download |
 | GET | `/reports/history` | UC-14 |
 
 ### `/api/analytics`
-| Method | Path | UC | Notes |
-|--------|------|----|-------|
-| GET | `/candidate` | UC-16 | returns profileViews, interviewCount, avgRating, skillsCount |
-| GET | `/employer` | UC-16 | ✅ returns timeToHire, acceptanceRate, avgRating, per-job breakdown |
+| Method | Path | UC |
+|--------|------|----|
+| GET | `/candidate` | UC-16 |
+| GET | `/employer` | UC-16 |
 
 ---
 
-## 16 Use Cases — Implementation Status
+## 17 Use Cases — Implementation Status
 | UC | Name | Status |
 |----|------|--------|
 | UC-01 | Login | ✅ Done |
@@ -192,54 +201,57 @@ unique: (rater_id, interview_slot_id)
 | UC-05 | Rate Candidate | ✅ Done |
 | UC-06 | Sign Up | ✅ Done |
 | UC-07 | Log Out | ✅ Done |
-| UC-08 | Manage Profile | ✅ Done |
+| UC-08 | Manage Candidate Profile | ✅ Done |
 | UC-09 | Upload CV | ✅ Done |
 | UC-10 | Set Preferences | ✅ Done |
 | UC-11 | View Job Postings (ranked) | ✅ Done |
 | UC-12 | Rate Employer | ✅ Done |
 | UC-13 | Manage Users | ✅ Done |
-| UC-14 | View System Reports | ✅ Done |
-| UC-15 | Send Interview Reminders (cron) | ✅ Done |
+| UC-14 | View System Reports + CSV Export | ✅ Done |
+| UC-15 | Send Interview Reminders (cron + NotificationLog) | ✅ Done |
 | UC-16 | View Hiring Analytics | ✅ Done |
+| UC-17 | Manage Employer Profile | ✅ Done |
+
+All 17 UCs fully implemented and verified. ✅
 
 ---
 
-## Remaining Backend TODOs
-All 4 original TODOs are now implemented. ✅
-1. ✅ `ScheduleController.getMyInterviews()` — implemented, returns slots for both roles
-2. ✅ `AuthService.requestPasswordReset()` + `resetPassword()` — fully implemented with token, expiry, email
-3. ✅ `AdminService.generateReport()` — real aggregation across 4 categories, persisted as GraphicalReport
-4. ✅ `AnalyticsService.getEmployerAnalytics()` — time-to-hire, acceptance rate, per-job breakdown
+## Session 3 Changes (2026-03-13)
+
+### Fixes
+- **CORS**: Added `PATCH` to allowed methods in `CorsConfig.java` (was blocking slot status updates)
+- **Slot Status Flow**: Added `PATCH /api/schedule/slots/{slotId}/status` endpoint; enforces role-based transitions (CANDIDATE: confirm/cancel; EMPLOYER: complete/cancel)
+- **Rating Gate**: `ReviewService` now checks slot is `COMPLETED` before allowing rating
+- **Password Reset**: `AuthService.resetPassword()` now resets `failedLoginAttempts` + sets `ACTIVE` status
+- **Reset Page**: `ResetPassword.jsx` detects `?token=` param and shows set-new-password form
+
+### New Features
+- **Analytics Charts**: 5+ Chart.js charts on both `EmployerAnalytics.jsx` and `CandidateAnalytics.jsx` (Bar, Doughnut, Pie, Horizontal Bar, Radar); ratings distribution (1★–5★) on both
+- **MyInterviews**: Role-aware page with action buttons (Confirm/Cancel/Mark Complete/Rate)
+- **UC-14 Export**: `GET /api/admin/reports/export` returns CSV download; Export CSV button wired in `SystemReports.jsx`
+- **UC-15 NotificationLog**: `NotificationLog` entity + `NotificationLogRepository`; `ReminderScheduler` logs SENT/FAILED per email with `@Transactional`; `findSlotsBetween` fixed to include `CONFIRMED` slots
+
+### Docs Updated
+- `CONTEXT.md`: fully rewritten with all 17 UCs, session 3 changes, NotificationLog entity, new endpoints, gotchas
+- `README.md`: added UC table (all 17), expanded NFR table, updated project structure (MyInterviews, NotificationLog, CSV export), added Dev Notes / Gotchas section
 
 ---
 
-## What's Left
+## Remaining TODOs
+**Nothing remaining.** All 17 UCs + NFRs implemented and merged to `main`.
 
-### Frontend
-- **EmployerAnalytics charts** — `EmployerAnalytics.jsx` currently shows "Coming soon" placeholder. Needs Chart.js integration to display timeToHire, acceptanceRate, per-job breakdown (data is available from `/api/analytics/employer`)
-- **MyInterviews** — page exists and works; `shared/` folder added, routes + nav wired for both roles ✅
+### Known NFR gaps (low priority, not blocking demo)
+- NFR 3.4.4: Email verification on signup — not implemented
+- NFR 3.8.5: Audit logs for account CRUD — not implemented
+- NFR 3.9.2: API rate limiting — not implemented (account lockout at 5 failures exists)
 
-### Backend
-- Nothing remaining. All 17 UCs + NFRs are implemented.
+---
 
-### Email / SMTP
-- Gmail credentials hardcoded in `application.properties` for local dev: `hmehmood180@gmail.com`
+## Email / SMTP
+- Gmail credentials in `application.properties` for local dev: `hmehmood180@gmail.com`
 - App password: `nucb ztif hfha kjxo`
 - **Do NOT commit `application.properties` with credentials to GitHub**
-- `@EnableAsync` is on `SwiftHireApplication` — all email methods are truly async
-
-### Deliverable-2
-- DCD (Design Class Diagram) work pending — to be done after all backend is complete and tested
-- Branch strategy: merge `backend-fixes` → `main` first, then create new branch for D2 work
-
----
-
-## ACD Consistency (Deliverable-1)
-All 4 gaps have been closed in implementation:
-1. ✅ `Candidate.atsScore` — added as `@Transient` (derived from MatchScore, contextual per-job)
-2. ✅ `JobPosting Uses KnownSkillsDictionary` — `@ManyToMany skillTags` added, join table `job_skill_tags`
-3. ✅ `GraphicalReport` class — entity + repo added, `AdminService.generateReport()` implemented
-4. ✅ `Admin extends User` — JOINED JPA inheritance, `admins` table, Admin entity added
+- `@EnableAsync` on `SwiftHireApplication` — all email methods are truly async
 
 ---
 
@@ -265,12 +277,13 @@ All 4 gaps have been closed in implementation:
 - Divides window into 45-min slots, assigns top-N candidates
 - Generates Jitsi Meet links: `https://meet.jit.si/swift-hire-<12-char-uid>` (no API key needed)
 - Emails BOTH candidate AND employer via EmailService on slot creation
-- Triggers EmailService (async, retryable, 3 attempts, 2s backoff)
-- NOTE: DB column is still named `calendlyLink` — just a string, no schema change needed
+- NOTE: DB column still named `calendlyLink` — just a string, no schema change needed
 
 ### ReminderScheduler
-- Cron queries slots where `reminderSentXd=false` AND date approaching
-- Sets flag after sending to prevent duplicates
+- `@Transactional` — keeps JPA session open to avoid LazyInitializationException
+- `findSlotsBetween` queries PENDING + CONFIRMED slots within ±5 min of threshold
+- Sets `reminderSentXd = true` after sending to prevent duplicates
+- Logs every send attempt to `notification_logs` table (SENT or FAILED with error message)
 
 ---
 
@@ -280,8 +293,8 @@ pages/auth/        Login, Signup, ResetPassword (handles both request + token fl
 pages/shared/      MyInterviews (role-aware: used by both /candidate/interviews and /employer/interviews)
 pages/candidate/   CandidateDashboard, Profile, JobPostings, CandidateAnalytics, RateEmployer
 pages/employer/    EmployerDashboard, EmployerProfile, HiringPrompt, RecommendedCandidates,
-                   AutoSchedule, EmployerAnalytics (charts TODO), RateCandidate
-pages/admin/       AdminDashboard, ManageUsers, SystemReports
+                   AutoSchedule, EmployerAnalytics, RateCandidate
+pages/admin/       AdminDashboard, ManageUsers, SystemReports (with Export CSV)
 ```
 JWT stored in localStorage as `sh_token`. Axios instance in `api/axios.js` adds Bearer header.
 
@@ -301,6 +314,8 @@ JWT stored in localStorage as `sh_token`. Axios instance in `api/axios.js` adds 
 - JPA entities: always persist parent before referencing in child
 - Stale JWT after backend restart → log out and back in
 - `spring-retry` dependency must be declared in pom.xml for `@Retryable`
+- `@Scheduled` methods accessing lazy JPA relations → always add `@Transactional`
+- `findSlotsBetween` uses UTC-based LocalDateTime — raw SQL inserts must use `UTC_TIMESTAMP()` not `NOW()` for test data
 
 ---
 

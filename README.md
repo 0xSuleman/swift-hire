@@ -38,7 +38,8 @@ swift-hire/
 │       ├── employer/                 # Employer profile CRUD
 │       ├── job/                      # HiringPrompt, JobPosting, PromptEngine, ATS scoring
 │       ├── scheduling/               # InterviewWindow, InterviewSlot, ScheduleService
-│       ├── automation/               # EmailService (SMTP), ReminderScheduler (cron)
+│       ├── automation/               # EmailService (SMTP), ReminderScheduler (cron),
+│       │                             # NotificationLog entity + repo (NFR 3.7.3)
 │       ├── review/                   # Review model, rate candidate/employer
 │       ├── analytics/                # Candidate + Employer analytics APIs
 │       ├── admin/                    # Manage users (ban/block), system reports
@@ -50,11 +51,12 @@ swift-hire/
         ├── api/                      # axios instance + per-module API files
         ├── context/AuthContext.jsx   # JWT storage, login/logout
         ├── components/common/        # ProtectedRoute, StarRating
-        ├── pages/auth/               # Login, Signup, ResetPassword
+        ├── pages/auth/               # Login, Signup, ResetPassword (request + token flows)
+        ├── pages/shared/             # MyInterviews (role-aware: candidate + employer)
         ├── pages/candidate/          # Dashboard, Profile, JobPostings, Analytics, RateEmployer
         ├── pages/employer/           # Dashboard, HiringPrompt, RecommendedCandidates,
         │                             # AutoSchedule, RateCandidate, EmployerProfile, Analytics
-        └── pages/admin/              # AdminDashboard, ManageUsers, SystemReports
+        └── pages/admin/              # AdminDashboard, ManageUsers, SystemReports (+ CSV export)
 ```
 
 ---
@@ -145,6 +147,30 @@ curl -s http://localhost:8080/api/auth/login \
 
 ---
 
+## Use Cases (All 17 Implemented ✅)
+
+| UC | Name |
+|---|---|
+| UC-01 | Login (JWT, lockout after 5 failures, role-based redirect) |
+| UC-02 | Process Hiring Prompt (Regex NLP, ATS scoring, job posting saved) |
+| UC-03 | View Recommended Candidates (ranked by ATS score, profile view) |
+| UC-04 | Auto-Schedule Batch (45-min slots, Jitsi Meet links, emails both parties) |
+| UC-05 | Rate Candidate (1–5 stars, gated behind COMPLETED slot) |
+| UC-06 | Sign Up (password strength via `@Pattern`, role: CANDIDATE or EMPLOYER) |
+| UC-07 | Log Out (JWT cleared client-side, redirect) |
+| UC-08 | Manage Candidate Profile |
+| UC-09 | Upload CV (PDFBox PDF parsing, skills extracted to DB) |
+| UC-10 | Set Preferences (location, shift, job type) |
+| UC-11 | View Job Postings (ranked feed for candidate, `GET /candidate/job-postings`) |
+| UC-12 | Rate Employer (1–5 stars, gated behind COMPLETED slot) |
+| UC-13 | Manage Users (admin: view, filter, ban/block/activate) |
+| UC-14 | View System Reports + CSV Export (`GET /api/admin/reports/export`) |
+| UC-15 | Send Interview Reminders (cron 7d/3d/1d, logged to `notification_logs` table) |
+| UC-16 | View Hiring Analytics (5+ Chart.js charts, employer + candidate dashboards) |
+| UC-17 | Manage Employer Profile (company name, location, description) |
+
+---
+
 ## Key NFRs Implemented
 
 | NFR | Implementation |
@@ -154,8 +180,25 @@ curl -s http://localhost:8080/api/auth/login \
 | Page load ≤2s | React SPA, API pagination |
 | BCrypt password hashing | `BCryptPasswordEncoder` bean |
 | JWT + configurable expiry | `jwt.expiry-ms` in properties |
+| Strong password (NFR 3.8.2) | `@Pattern` regex on `SignupRequest` |
 | Rate limit + lock at 5 failures | `failedLoginAttempts` on User entity |
 | PDF-only, ≤10MB upload | Validated in `CvParserService.validatePdf()` |
 | Email retry ×3 | `@Retryable(maxAttempts=3)` on `EmailService` |
 | No duplicate reminders | `reminderSent7d/3d/1d` flags on `InterviewSlot` |
+| Notification DB log (NFR 3.7.3) | `NotificationLog` entity — logs SENT/FAILED per reminder |
+| Slot status flow | PENDING → CONFIRMED → COMPLETED; role-gated PATCH endpoint |
+| Archive deleted jobs (NFR 3.9.5) | Soft-delete → `ARCHIVED` status |
 | SQL injection + XSS prevention | `GlobalExceptionHandler` + Spring input binding |
+
+---
+
+## Dev Notes / Gotchas
+
+- **Maven on macOS**: always `JAVA_HOME=/opt/homebrew/opt/openjdk@17 mvn <cmd>` — Homebrew defaults to latest JDK
+- **PDFBox 3.x API**: use `Loader.loadPDF(byte[])` — `PDDocument.load(InputStream)` was removed
+- **CV parsing regex**: use `Pattern.find()` not `String.matches()` — multi-line PDF text requires substring search
+- **`@Scheduled` + JPA lazy relations**: always add `@Transactional` to the scheduled method to keep the JPA session open
+- **Test data timestamps**: raw SQL must use `UTC_TIMESTAMP()` not `NOW()` — Hibernate sends `LocalDateTime` as UTC via JDBC driver (`serverTimezone=UTC`)
+- **Stale JWT**: after a backend restart, log out and back in — old tokens cause 403s without a `message` field
+- **`Map.of()` with mixed types**: use `LinkedHashMap` with explicit `put()` — `Map.of()` infers a complex intersection type incompatible with `Map<String, Object>`
+- **Jitsi Meet links**: `https://meet.jit.si/swift-hire-<12-char-uid>` — no API key needed; DB column still named `calendlyLink`
