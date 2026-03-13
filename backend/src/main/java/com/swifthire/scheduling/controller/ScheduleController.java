@@ -112,4 +112,53 @@ public class ScheduleController {
 
         return ResponseEntity.ok(ApiResponse.ok("Interviews fetched.", result));
     }
+
+    // Update slot status — drives the PENDING→CONFIRMED→COMPLETED flow
+    @PatchMapping("/slots/{slotId}/status")
+    public ResponseEntity<ApiResponse<Object>> updateSlotStatus(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long slotId,
+            @RequestBody Map<String, String> body) {
+
+        var user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+
+        InterviewSlot slot = slotRepository.findById(slotId)
+                .orElseThrow(() -> new IllegalArgumentException("Slot not found."));
+
+        String requested = body.get("status");
+        if (requested == null) throw new IllegalArgumentException("Status is required.");
+        InterviewSlot.SlotStatus newStatus = InterviewSlot.SlotStatus.valueOf(requested);
+        InterviewSlot.SlotStatus current   = slot.getStatus();
+
+        if (user.getRole() == Role.CANDIDATE) {
+            var candidate = candidateRepository.findByUserId(user.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Candidate not found."));
+            if (!slot.getCandidate().getId().equals(candidate.getId())) {
+                throw new IllegalArgumentException("You are not the candidate for this slot.");
+            }
+            // Candidate: PENDING→CONFIRMED or PENDING/CONFIRMED→CANCELLED
+            boolean allowed = (newStatus == InterviewSlot.SlotStatus.CONFIRMED && current == InterviewSlot.SlotStatus.PENDING)
+                           || (newStatus == InterviewSlot.SlotStatus.CANCELLED  && (current == InterviewSlot.SlotStatus.PENDING || current == InterviewSlot.SlotStatus.CONFIRMED));
+            if (!allowed) throw new IllegalArgumentException("Invalid status transition for candidate.");
+
+        } else if (user.getRole() == Role.EMPLOYER) {
+            var employer = employerRepository.findByUserId(user.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Employer not found."));
+            if (!slot.getWindow().getEmployer().getId().equals(employer.getId())) {
+                throw new IllegalArgumentException("You are not the employer for this slot.");
+            }
+            // Employer: CONFIRMED→COMPLETED or PENDING/CONFIRMED→CANCELLED
+            boolean allowed = (newStatus == InterviewSlot.SlotStatus.COMPLETED  && current == InterviewSlot.SlotStatus.CONFIRMED)
+                           || (newStatus == InterviewSlot.SlotStatus.CANCELLED   && (current == InterviewSlot.SlotStatus.PENDING || current == InterviewSlot.SlotStatus.CONFIRMED));
+            if (!allowed) throw new IllegalArgumentException("Invalid status transition for employer.");
+
+        } else {
+            throw new IllegalArgumentException("Admins cannot update slot status.");
+        }
+
+        slot.setStatus(newStatus);
+        slotRepository.save(slot);
+        return ResponseEntity.ok(ApiResponse.ok("Slot status updated to " + newStatus + ".", null));
+    }
 }

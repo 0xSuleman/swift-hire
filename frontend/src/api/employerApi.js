@@ -9,7 +9,8 @@ export const employerApi = {
   scheduleBatch:        (data)           => api.post('/schedule/batch', data),
   rateCandidate:        (data)           => api.post('/reviews/candidate', data),
   getAnalytics:         ()               => api.get('/analytics/employer'),
-  getMyInterviews:      ()               => api.get('/schedule/my-interviews'),
+  getMyInterviews:      ()                    => api.get('/schedule/my-interviews'),
+  updateSlotStatus:     (slotId, status)      => api.patch(`/schedule/slots/${slotId}/status`, { status }),
   updateJob:            (jobId, data)    => api.put(`/jobs/${jobId}`, data),
   deleteJob:            (jobId)          => api.delete(`/jobs/${jobId}`),
 }

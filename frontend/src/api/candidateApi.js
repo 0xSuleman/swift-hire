@@ -11,6 +11,7 @@ export const candidateApi = {
   setPreferences:   (prefs)   => api.put('/candidate/preferences', prefs),
   getJobPostings:   ()        => api.get('/candidate/job-postings'),
   getAnalytics:     ()        => api.get('/analytics/candidate'),
-  getMyInterviews:  ()        => api.get('/schedule/my-interviews'),
-  rateEmployer:     (data)    => api.post('/reviews/employer', data),
+  getMyInterviews:  ()              => api.get('/schedule/my-interviews'),
+  updateSlotStatus: (slotId, status) => api.patch(`/schedule/slots/${slotId}/status`, { status }),
+  rateEmployer:     (data)          => api.post('/reviews/employer', data),
 }
