@@ -4,8 +4,10 @@ import com.swifthire.common.exception.ResourceNotFoundException;
 import com.swifthire.job.model.JobPosting;
 import com.swifthire.job.repository.JobPostingRepository;
 import com.swifthire.job.repository.MatchScoreRepository;
+import com.swifthire.review.repository.ReviewRepository;
 import com.swifthire.scheduling.model.InterviewSlot;
 import com.swifthire.scheduling.repository.InterviewSlotRepository;
+import com.swifthire.user.model.User;
 import com.swifthire.user.repository.CandidateRepository;
 import com.swifthire.user.repository.EmployerRepository;
 import com.swifthire.user.repository.UserRepository;
@@ -28,6 +30,7 @@ public class AnalyticsService {
     private final InterviewSlotRepository slotRepository;
     private final JobPostingRepository jobPostingRepository;
     private final MatchScoreRepository matchScoreRepository;
+    private final ReviewRepository reviewRepository;
 
     // UC-16: Candidate view — profile views, interview count, rating, skill count + chart data
     public Map<String, Object> getCandidateAnalytics(String email) {
@@ -70,6 +73,7 @@ public class AnalyticsService {
         result.put("parsedSkillsCount",   skillsCount);
         result.put("interviewStatusBreakdown", statusBreakdown);
         result.put("topJobMatches",       topMatches);
+        result.put("ratingsBreakdown",    buildRatingsBreakdown(user));
         return result;
     }
 
@@ -150,6 +154,18 @@ public class AnalyticsService {
         result.put("avgTimeToHireDays", avgTimeToHire);
         result.put("jobBreakdown",      perJob);
         result.put("jobStatusCounts",   jobStatusCounts);
+        result.put("ratingsBreakdown",  buildRatingsBreakdown(user));
         return result;
+    }
+
+    // Ratings distribution: count of 1★ through 5★ received by user
+    private Map<String, Object> buildRatingsBreakdown(User user) {
+        var reviews = reviewRepository.findByRatee(user);
+        Map<String, Object> breakdown = new LinkedHashMap<>();
+        for (int star = 1; star <= 5; star++) {
+            final int s = star;
+            breakdown.put(s + "★", reviews.stream().filter(r -> r.getRatingValue() == s).count());
+        }
+        return breakdown;
     }
 }
