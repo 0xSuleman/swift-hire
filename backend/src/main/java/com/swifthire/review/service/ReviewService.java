@@ -30,6 +30,9 @@ public class ReviewService {
         User rater = findUser(raterEmail);
         InterviewSlot slot = findSlot(slotId);
 
+        if (slot.getStatus() != InterviewSlot.SlotStatus.COMPLETED) {
+            throw new IllegalArgumentException("You can only rate after the interview is marked as completed.");
+        }
         if (reviewRepository.findByRaterIdAndInterviewSlotId(rater.getId(), slotId).isPresent()) {
             throw new IllegalArgumentException("You have already rated this candidate for this interview.");
         }
@@ -46,6 +49,9 @@ public class ReviewService {
         User rater = findUser(raterEmail);
         InterviewSlot slot = findSlot(slotId);
 
+        if (slot.getStatus() != InterviewSlot.SlotStatus.COMPLETED) {
+            throw new IllegalArgumentException("You can only rate after the interview is marked as completed.");
+        }
         if (reviewRepository.findByRaterIdAndInterviewSlotId(rater.getId(), slotId).isPresent()) {
             throw new IllegalArgumentException("You have already submitted a rating for this interview.");
         }
