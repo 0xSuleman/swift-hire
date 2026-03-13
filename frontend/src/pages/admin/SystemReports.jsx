@@ -15,6 +15,24 @@ export default function SystemReports() {
   const [report, setReport] = useState(null)
   const [error, setError]   = useState('')
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  const exportCsv = async () => {
+    setExporting(true)
+    try {
+      const res = await adminApi.exportReport(params)
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `report-${params.category}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setError('Export failed. Generate a report first.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const generate = async e => {
     e.preventDefault()
@@ -112,10 +130,11 @@ export default function SystemReports() {
               <p style={{ fontSize: '0.75rem', color: '#4B5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
                 Report Output
               </p>
-              <button style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: '#6B7280', fontSize: '0.75rem', cursor: 'pointer' }}
+              <button onClick={exportCsv} disabled={exporting}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: '#6B7280', fontSize: '0.75rem', cursor: 'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#9CA3AF'}
                 onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}>
-                <Download size={12} /> Export
+                <Download size={12} /> {exporting ? 'Exporting...' : 'Export CSV'}
               </button>
             </div>
             <pre style={{ margin: 0, fontSize: '0.78rem', color: '#9CA3AF', lineHeight: 1.7, overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
