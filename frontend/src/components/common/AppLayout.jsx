@@ -2,21 +2,23 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
   LayoutDashboard, User, Briefcase, BarChart2,
-  Zap, Building2, Users, FileText, LogOut,
+  Zap, Building2, Users, FileText, LogOut, CalendarDays,
 } from 'lucide-react'
 
 const NAV = {
   CANDIDATE: [
-    { to: '/candidate',           label: 'Dashboard',    Icon: LayoutDashboard },
-    { to: '/candidate/profile',   label: 'My Profile',   Icon: User },
-    { to: '/candidate/jobs',      label: 'Job Postings', Icon: Briefcase },
-    { to: '/candidate/analytics', label: 'Analytics',    Icon: BarChart2 },
+    { to: '/candidate',              label: 'Dashboard',    Icon: LayoutDashboard },
+    { to: '/candidate/profile',      label: 'My Profile',   Icon: User },
+    { to: '/candidate/jobs',         label: 'Job Postings', Icon: Briefcase },
+    { to: '/candidate/interviews',   label: 'Interviews',   Icon: CalendarDays },
+    { to: '/candidate/analytics',    label: 'Analytics',    Icon: BarChart2 },
   ],
   EMPLOYER: [
-    { to: '/employer',            label: 'Dashboard',    Icon: LayoutDashboard },
-    { to: '/employer/prompt',     label: 'Hire Now',     Icon: Zap },
-    { to: '/employer/profile',    label: 'Company',      Icon: Building2 },
-    { to: '/employer/analytics',  label: 'Analytics',    Icon: BarChart2 },
+    { to: '/employer',               label: 'Dashboard',    Icon: LayoutDashboard },
+    { to: '/employer/prompt',        label: 'Hire Now',     Icon: Zap },
+    { to: '/employer/interviews',    label: 'Interviews',   Icon: CalendarDays },
+    { to: '/employer/profile',       label: 'Company',      Icon: Building2 },
+    { to: '/employer/analytics',     label: 'Analytics',    Icon: BarChart2 },
   ],
   ADMIN: [
     { to: '/admin',               label: 'Dashboard',    Icon: LayoutDashboard },

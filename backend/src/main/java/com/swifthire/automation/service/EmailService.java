@@ -64,6 +64,21 @@ public class EmailService {
         send(toEmail, subject, body);
     }
 
+    // NFR 3.8.3: Password reset email
+    @Async
+    @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000))
+    public void sendPasswordResetEmail(String toEmail, String name, String resetLink) {
+        String subject = "Swift Hire — Password Reset Request";
+        String body = String.format("""
+                <h2>Hello %s,</h2>
+                <p>We received a request to reset your Swift Hire password.</p>
+                <p><a href="%s">Click here to reset your password</a></p>
+                <p>This link expires in <strong>1 hour</strong>. If you didn't request this, ignore this email.</p>
+                <p>— Swift Hire Team</p>
+                """, name, resetLink);
+        send(toEmail, subject, body);
+    }
+
     private void send(String to, String subject, String htmlBody) {
         try {
             MimeMessage msg = mailSender.createMimeMessage();

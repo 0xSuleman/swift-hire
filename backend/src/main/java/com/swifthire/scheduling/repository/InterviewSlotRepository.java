@@ -23,4 +23,5 @@ public interface InterviewSlotRepository extends JpaRepository<InterviewSlot, Lo
     List<InterviewSlot> findSlotsBetween(LocalDateTime from, LocalDateTime to);
 
     List<InterviewSlot> findByJobPostingId(Long jobPostingId);
+    List<InterviewSlot> findByWindow_Employer(com.swifthire.user.model.Employer employer);
 }

@@ -75,7 +75,7 @@ public class ScheduleService {
                     .orElseThrow(() -> new IllegalArgumentException("Candidate not found: " + candidateId));
 
             LocalDateTime slotEnd = cursor.plusMinutes(SLOT_DURATION_MINUTES);
-            String link = "https://calendly.com/swift-hire/" + UUID.randomUUID();
+            String link = "https://meet.jit.si/swift-hire-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 
             InterviewSlot slot = InterviewSlot.builder()
                     .window(window)
@@ -88,9 +88,11 @@ public class ScheduleService {
 
             result.add(slotRepository.save(slot));
 
-            // Email invitation to candidate (UC-04)
+            // Email invitation to candidate and employer (UC-04)
             emailService.sendInterviewInvitation(candidate.getUser().getEmail(),
                     candidate.getUser().getName(), cursor, slotEnd, link);
+            emailService.sendInterviewInvitation(window.getEmployer().getUser().getEmail(),
+                    window.getEmployer().getUser().getName(), cursor, slotEnd, link);
 
             cursor = slotEnd;
         }
