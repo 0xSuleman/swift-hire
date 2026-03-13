@@ -131,8 +131,23 @@ export default function CandidateAnalytics() {
     }],
   }
 
+  // Chart 6 — Bar: ratings distribution (1★–5★)
+  const ratingsBreakdown = data?.ratingsBreakdown ?? {}
+  const ratingsBar = {
+    labels: ['1★', '2★', '3★', '4★', '5★'],
+    datasets: [{
+      label: 'Reviews received',
+      data: ['1★', '2★', '3★', '4★', '5★'].map(k => ratingsBreakdown[k] ?? 0),
+      backgroundColor: ['#EF444430', '#F9731640',     '#F59E0B40', '#34D39940', '#2EE5B040'],
+      borderColor:     ['#EF4444',   '#F97316',      '#F59E0B',   '#34D399',   '#2EE5B0'],
+      borderWidth: 1,
+      borderRadius: 4,
+    }],
+  }
+
   const hasInterviews = (data?.interviewCount ?? 0) > 0
   const hasMatches    = topMatches.length > 0
+  const hasRatings    = (data?.averageRating ?? 0) > 0
 
   return (
     <AppLayout>
@@ -203,6 +218,23 @@ export default function CandidateAnalytics() {
                 responsive: true,
               }} />
             </div>
+          </div>
+        )}
+
+        {/* Row 3: Ratings distribution */}
+        {hasRatings && (
+          <div className="app-card">
+            <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>
+              Ratings Received (1★ – 5★)
+            </p>
+            <Bar data={ratingsBar} options={{
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { ticks: { color: '#6B7280' }, grid: { color: '#1F2937' } },
+                y: { ticks: { color: '#6B7280', stepSize: 1 }, grid: { color: '#1F2937' }, beginAtZero: true },
+              },
+              responsive: true,
+            }} />
           </div>
         )}
 
