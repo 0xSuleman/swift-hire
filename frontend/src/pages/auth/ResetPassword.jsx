@@ -1,12 +1,22 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { authApi } from '../../api/authApi'
 import AuthLayout from '../../components/common/AuthLayout'
-import { Mail, ArrowLeft, Loader2, AlertCircle, MailCheck } from 'lucide-react'
+import { Mail, Lock, ArrowLeft, Loader2, AlertCircle, MailCheck, CheckCircle2 } from 'lucide-react'
 
 export default function ResetPassword() {
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get('token')
+  const navigate = useNavigate()
+
+  // --- Request flow (no token) ---
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
+
+  // --- Reset flow (token present) ---
+  const [newPassword, setNewPassword] = useState('')
+  const [done, setDone] = useState(false)
+
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -24,6 +34,93 @@ export default function ResetPassword() {
     }
   }
 
+  const handleReset = async e => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await authApi.resetPassword(token, newPassword)
+      setDone(true)
+      setTimeout(() => navigate('/login'), 2500)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Reset failed. The link may have expired.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ── Token present: show set-new-password form ──────────────────────────────
+  if (token) {
+    return (
+      <AuthLayout
+        headingTeal="Almost There"
+        headingWhite="Set New Password"
+        tagline="Choose a strong password for your account."
+      >
+        {done ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '8px 0', textAlign: 'center' }}>
+            <div style={{
+              width: 60, height: 60, borderRadius: '50%',
+              background: 'rgba(46,229,176,0.1)', border: '1px solid rgba(46,229,176,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 0 24px rgba(46,229,176,0.15)',
+            }}>
+              <CheckCircle2 size={26} style={{ color: '#2EE5B0' }} />
+            </div>
+            <div>
+              <p style={{ fontSize: '0.9rem', fontWeight: 500, color: '#E8EAF0', marginBottom: 6 }}>Password updated!</p>
+              <p style={{ fontSize: '0.8rem', color: '#6B7280' }}>Redirecting you to sign in…</p>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#9CA3AF', marginBottom: '8px', letterSpacing: '0.03em' }}>
+                New password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Lock style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#4B5563' }} />
+                <input
+                  className="auth-input"
+                  type="password"
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  required
+                  minLength={6}
+                  onChange={e => setNewPassword(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="error-banner">
+                <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                {error}
+              </div>
+            )}
+
+            <button type="submit" className="btn-teal" disabled={loading}>
+              {loading
+                ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Updating…
+                  </span>
+                : 'Update Password'
+              }
+            </button>
+
+            <Link to="/login">
+              <button type="button" className="btn-ghost">
+                <ArrowLeft size={14} />
+                Back to Sign In
+              </button>
+            </Link>
+          </form>
+        )}
+      </AuthLayout>
+    )
+  }
+
+  // ── No token: show request-reset form ─────────────────────────────────────
   return (
     <AuthLayout
       headingTeal="Account Recovery"

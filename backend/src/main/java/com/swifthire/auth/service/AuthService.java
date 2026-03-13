@@ -145,6 +145,8 @@ public class AuthService {
 
         User user = resetToken.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
+        user.setFailedLoginAttempts(0);
+        user.setAccountStatus(AccountStatus.ACTIVE);
         userRepository.save(user);
 
         resetToken.setUsed(true);
