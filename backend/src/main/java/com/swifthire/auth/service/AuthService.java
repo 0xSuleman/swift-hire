@@ -3,7 +3,10 @@ package com.swifthire.auth.service;
 import com.swifthire.auth.dto.LoginRequest;
 import com.swifthire.auth.dto.LoginResponse;
 import com.swifthire.auth.dto.SignupRequest;
+import com.swifthire.auth.model.PasswordResetToken;
+import com.swifthire.auth.repository.PasswordResetTokenRepository;
 import com.swifthire.auth.util.JwtUtil;
+import com.swifthire.automation.service.EmailService;
 import com.swifthire.user.model.*;
 import com.swifthire.user.repository.AdminRepository;
 import com.swifthire.user.repository.CandidateRepository;
@@ -12,11 +15,14 @@ import com.swifthire.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -26,13 +32,18 @@ public class AuthService {
     private final CandidateRepository candidateRepository;
     private final EmployerRepository employerRepository;
     private final AdminRepository adminRepository;
+    private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final UserDetailsServiceImpl userDetailsService;
+    private final EmailService emailService;
 
     @Value("${app.security.max-failed-attempts}")
     private int maxFailedAttempts;
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     @Transactional
     public void signup(SignupRequest request) {
@@ -99,16 +110,44 @@ public class AuthService {
                 .build();
     }
 
-    // TODO: implement password reset flow (NFR 3.8.3)
+    // NFR 3.8.3: Request password reset — generate token and email link
+    @Transactional
     public void requestPasswordReset(String email) {
-        // 1. Lookup user by email
-        // 2. Generate reset token (UUID), store with expiry
-        // 3. Send reset link via EmailService
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("No account found with that email."));
+
+        // Remove any existing token for this user
+        resetTokenRepository.deleteByUserId(user.getId());
+
+        String token = UUID.randomUUID().toString();
+        resetTokenRepository.save(PasswordResetToken.builder()
+                .token(token)
+                .user(user)
+                .expiresAt(LocalDateTime.now().plusHours(1))
+                .build());
+
+        String resetLink = frontendUrl + "/reset-password?token=" + token;
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetLink);
     }
 
+    // NFR 3.8.3: Validate token and update password
+    @Transactional
     public void resetPassword(String token, String newPassword) {
-        // 1. Validate token and expiry
-        // 2. Hash new password and save
-        // 3. Invalidate token
+        PasswordResetToken resetToken = resetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired reset link."));
+
+        if (resetToken.isUsed()) {
+            throw new IllegalArgumentException("Reset link has already been used.");
+        }
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Reset link has expired. Please request a new one.");
+        }
+
+        User user = resetToken.getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+        resetTokenRepository.save(resetToken);
     }
 }

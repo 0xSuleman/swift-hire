@@ -5,7 +5,10 @@ import com.swifthire.scheduling.model.InterviewSlot;
 import com.swifthire.scheduling.model.InterviewWindow;
 import com.swifthire.scheduling.repository.InterviewWindowRepository;
 import com.swifthire.scheduling.service.ScheduleService;
+import com.swifthire.scheduling.repository.InterviewSlotRepository;
 import com.swifthire.user.model.Employer;
+import com.swifthire.user.model.Role;
+import com.swifthire.user.repository.CandidateRepository;
 import com.swifthire.user.repository.EmployerRepository;
 import com.swifthire.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,7 +30,9 @@ public class ScheduleController {
 
     private final ScheduleService scheduleService;
     private final InterviewWindowRepository windowRepository;
+    private final InterviewSlotRepository slotRepository;
     private final EmployerRepository employerRepository;
+    private final CandidateRepository candidateRepository;
     private final UserRepository userRepository;
 
     // UC-04: Auto-Schedule Batch
@@ -62,11 +68,48 @@ public class ScheduleController {
                 "Schedule created. Invitations sent to " + slots.size() + " candidate(s).", slots.size()));
     }
 
-    // Get interviews for current candidate
+    // UC-04 / UC-11: Return scheduled slots for the logged-in candidate or employer
     @GetMapping("/my-interviews")
     public ResponseEntity<ApiResponse<Object>> getMyInterviews(
             @AuthenticationPrincipal UserDetails userDetails) {
-        // TODO: return slots for the logged-in candidate/employer
-        return ResponseEntity.ok(ApiResponse.ok("TODO", null));
+
+        var user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+
+        List<Map<String, Object>> result;
+
+        if (user.getRole() == Role.CANDIDATE) {
+            var candidate = candidateRepository.findByUserId(user.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Candidate profile not found."));
+            result = slotRepository.findByCandidate(candidate).stream().map(s -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("slotId",       s.getId());
+                m.put("jobTitle",     s.getJobPosting().getJobTitle());
+                m.put("employer",     s.getJobPosting().getEmployer().getCompanyName());
+                m.put("startTime",    s.getStartTime().toString());
+                m.put("endTime",      s.getEndTime().toString());
+                m.put("status",       s.getStatus().name());
+                m.put("calendlyLink", s.getCalendlyLink());
+                return m;
+            }).toList();
+        } else {
+            // EMPLOYER: return all slots across their interview windows
+            var employer = employerRepository.findByUserId(user.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Employer profile not found."));
+            result = slotRepository.findByWindow_Employer(employer).stream().map(s -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("slotId",       s.getId());
+                m.put("jobTitle",     s.getJobPosting().getJobTitle());
+                m.put("candidate",    s.getCandidate().getUser().getName());
+                m.put("skills",       s.getCandidate().getParsedSkills());
+                m.put("startTime",    s.getStartTime().toString());
+                m.put("endTime",      s.getEndTime().toString());
+                m.put("status",       s.getStatus().name());
+                m.put("calendlyLink", s.getCalendlyLink());
+                return m;
+            }).toList();
+        }
+
+        return ResponseEntity.ok(ApiResponse.ok("Interviews fetched.", result));
     }
 }
