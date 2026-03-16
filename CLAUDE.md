@@ -59,6 +59,12 @@ It contains hard rules to follow and a running log of past mistakes to never rep
   with its own error format (no `message` field), not our `ApiResponse`. Frontend fallback
   shows generic message. Fix: always log out and back in after a backend restart during testing.
 
+- [2026-03-16] — @Transactional rolls back on ANY RuntimeException by default. If a method
+  throws BadCredentialsException (or any RuntimeException) to signal a business error, any DB
+  changes made before the throw (e.g. incrementing failedLoginAttempts) are silently rolled back.
+  Fix: use @Transactional(noRollbackFor = {BadCredentialsException.class, ...}) when the method
+  must persist state even on a failure path.
+
 - [2026-03-16] — React 18 StrictMode mounts effects TWICE in development. Any `useEffect`
   that fires a non-idempotent API call (e.g. a one-shot token consumption endpoint) will be
   called twice: the first call succeeds and clears state (token nulled), the second call fails.

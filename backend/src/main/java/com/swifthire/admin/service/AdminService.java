@@ -96,6 +96,10 @@ public class AdminService {
         }
 
         user.setAccountStatus(newStatus);
+        // Reset lock counter when admin re-activates an account
+        if (newStatus == AccountStatus.ACTIVE) {
+            user.setFailedLoginAttempts(0);
+        }
         userRepository.save(user);
 
         // NFR 3.8.5 — audit log

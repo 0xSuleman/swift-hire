@@ -102,7 +102,7 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {BadCredentialsException.class, IllegalArgumentException.class, IllegalStateException.class})
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password."));
