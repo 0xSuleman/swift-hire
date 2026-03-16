@@ -5,6 +5,7 @@ import ProtectedRoute from './components/common/ProtectedRoute'
 import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
 import ResetPassword from './pages/auth/ResetPassword'
+import VerifyEmail from './pages/auth/VerifyEmail'
 
 // Shared
 import MyInterviews from './pages/shared/MyInterviews'
@@ -37,6 +38,7 @@ export default function App() {
       <Route path="/login"         element={<Login />} />
       <Route path="/signup"        element={<Signup />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/verify-email"   element={<VerifyEmail />} />
 
       {/* Candidate */}
       <Route element={<ProtectedRoute allowedRoles={['CANDIDATE']} />}>

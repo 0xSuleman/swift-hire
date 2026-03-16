@@ -54,12 +54,17 @@ public class AuthService {
             throw new IllegalArgumentException("Cannot self-register as Admin.");
         }
 
+        String verToken = UUID.randomUUID().toString();
+
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .phoneNo(request.getPhoneNo())
                 .role(request.getRole())
+                .emailVerified(false)
+                .verificationToken(verToken)
+                .verificationTokenExpiry(LocalDateTime.now().plusHours(24))
                 .build();
         userRepository.save(user);
 
@@ -73,12 +78,39 @@ public class AuthService {
             admin.setId(user.getId());
             adminRepository.save(admin);
         }
+
+        String verifyLink = frontendUrl + "/verify-email?token=" + verToken;
+        emailService.sendVerificationEmail(user.getEmail(), user.getName(), verifyLink);
+    }
+
+    // NFR 3.4.4: Verify email token
+    @Transactional
+    public void verifyEmail(String token) {
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired verification link."));
+
+        if (user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Verification link has expired. Please sign up again.");
+        }
+
+        // Idempotent: if already verified (e.g. StrictMode double-call), just return
+        if (user.isEmailVerified()) {
+            return;
+        }
+
+        user.setEmailVerified(true);
+        userRepository.save(user);
     }
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password."));
+
+        // NFR 3.4.4 — email verification check
+        if (!user.isEmailVerified()) {
+            throw new IllegalStateException("Please verify your email before logging in.");
+        }
 
         // NFR 3.8.4 — account lock check
         if (user.getFailedLoginAttempts() >= maxFailedAttempts) {

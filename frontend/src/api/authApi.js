@@ -6,4 +6,5 @@ export const authApi = {
   logout: ()                   => api.post('/auth/logout'),
   requestReset: (email)        => api.post(`/auth/reset-password-request?email=${email}`),
   resetPassword: (token, pwd)  => api.post(`/auth/reset-password?token=${token}&newPassword=${pwd}`),
+  verifyEmail: (token)         => api.get(`/auth/verify-email?token=${token}`),
 }

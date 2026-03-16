@@ -37,6 +37,13 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("Logged out successfully.", null));
     }
 
+    // NFR 3.4.4: Email verification
+    @GetMapping("/verify-email")
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@RequestParam String token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok(ApiResponse.ok("Email verified successfully. You can now log in.", null));
+    }
+
     // NFR 3.8.3: Password reset
     @PostMapping("/reset-password-request")
     public ResponseEntity<ApiResponse<Void>> requestReset(@RequestParam String email) {
