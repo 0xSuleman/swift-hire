@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
 import { adminApi } from '../../api/adminApi'
 import AppLayout from '../../components/common/AppLayout'
-import { Search, Star, ShieldCheck, ShieldOff, Trash2, Loader2, AlertCircle, CheckCircle2, Filter } from 'lucide-react'
+import { Search, Star, ShieldCheck, ShieldOff, Trash2, Loader2, AlertCircle, CheckCircle2, Filter, ClipboardList } from 'lucide-react'
 
 const ROLE_COLOR   = { CANDIDATE: '#2EE5B0', EMPLOYER: '#818CF8', ADMIN: '#F59E0B' }
 const STATUS_COLOR = { ACTIVE: '#2EE5B0', BANNED: '#EF4444', DEACTIVATED: '#6B7280' }
 
 export default function ManageUsers() {
-  const [users, setUsers]   = useState([])
-  const [filter, setFilter] = useState({ role: '', maxRating: '', status: '' })
-  const [toast, setToast]   = useState({ msg: '', type: 'ok' })
+  const [users, setUsers]     = useState([])
+  const [filter, setFilter]   = useState({ role: '', maxRating: '', status: '' })
+  const [toast, setToast]     = useState({ msg: '', type: 'ok' })
   const [loading, setLoading] = useState(false)
+  const [auditLogs, setAuditLogs] = useState([])
+  const [logsLoading, setLogsLoading] = useState(false)
 
   const notify = (msg, type = 'ok') => {
     setToast({ msg, type })
@@ -39,12 +41,25 @@ export default function ManageUsers() {
       await adminApi.updateStatus(userId, action)
       notify('User status updated successfully.')
       search()
+      loadAuditLogs()
     } catch (err) {
       notify(err.response?.data?.message || 'Action failed.', 'err')
     }
   }
 
-  useEffect(() => { search() }, [])
+  const loadAuditLogs = async () => {
+    setLogsLoading(true)
+    try {
+      const res = await adminApi.getAuditLogs()
+      setAuditLogs(res.data.data)
+    } catch {
+      // non-critical — silently ignore
+    } finally {
+      setLogsLoading(false)
+    }
+  }
+
+  useEffect(() => { search(); loadAuditLogs() }, [])
 
   return (
     <AppLayout>
@@ -171,6 +186,58 @@ export default function ManageUsers() {
           ))}
         </div>
       )}
+      {/* Audit Log — NFR 3.8.5 */}
+      <div style={{ marginTop: 40 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <ClipboardList size={15} style={{ color: '#2EE5B0' }} />
+          <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#E8EAF0', margin: 0 }}>Audit Log</h2>
+          <span style={{ fontSize: '0.72rem', color: '#4B5563' }}>— admin actions on user accounts</span>
+        </div>
+
+        {logsLoading && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#4B5563', padding: '12px 0', fontSize: '0.82rem' }}>
+            <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Loading logs...
+          </div>
+        )}
+
+        {!logsLoading && auditLogs.length === 0 && (
+          <p style={{ color: '#4B5563', fontSize: '0.82rem' }}>No audit entries yet.</p>
+        )}
+
+        {!logsLoading && auditLogs.length > 0 && (
+          <div className="app-card" style={{ overflow: 'auto', padding: 0 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  {['Time', 'Admin', 'Action', 'Target ID', 'Target Email'].map(h => (
+                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', color: '#4B5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {auditLogs.map(log => {
+                  const actionColor = log.action === 'APPROVE' ? '#2EE5B0' : log.action === 'BLOCK' ? '#EF4444' : '#6B7280'
+                  return (
+                    <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '9px 16px', color: '#6B7280', whiteSpace: 'nowrap' }}>
+                        {new Date(log.performedAt).toLocaleString()}
+                      </td>
+                      <td style={{ padding: '9px 16px', color: '#9CA3AF' }}>{log.adminEmail}</td>
+                      <td style={{ padding: '9px 16px' }}>
+                        <span style={{ padding: '2px 8px', borderRadius: 9999, background: `${actionColor}15`, color: actionColor, fontWeight: 600, fontSize: '0.7rem' }}>
+                          {log.action}
+                        </span>
+                      </td>
+                      <td style={{ padding: '9px 16px', color: '#6B7280' }}>{log.targetUserId}</td>
+                      <td style={{ padding: '9px 16px', color: '#9CA3AF' }}>{log.targetEmail}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </AppLayout>
   )
 }

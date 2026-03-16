@@ -2,7 +2,9 @@ package com.swifthire.admin.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swifthire.admin.model.AuditLog;
 import com.swifthire.admin.model.GraphicalReport;
+import com.swifthire.admin.repository.AuditLogRepository;
 import com.swifthire.admin.repository.GraphicalReportRepository;
 import com.swifthire.common.exception.ResourceNotFoundException;
 import com.swifthire.job.model.JobPosting;
@@ -30,6 +32,7 @@ public class AdminService {
     private final ReviewRepository reviewRepository;
     private final InterviewSlotRepository slotRepository;
     private final GraphicalReportRepository graphicalReportRepository;
+    private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
 
     public List<Map<String, Object>> getUsers(String role, Double maxRating, String status) {
@@ -77,7 +80,7 @@ public class AdminService {
     }
 
     @Transactional
-    public void updateUserStatus(Long userId, String action) {
+    public void updateUserStatus(Long userId, String action, String adminEmail) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
@@ -94,6 +97,28 @@ public class AdminService {
 
         user.setAccountStatus(newStatus);
         userRepository.save(user);
+
+        // NFR 3.8.5 — audit log
+        auditLogRepository.save(AuditLog.builder()
+                .adminEmail(adminEmail)
+                .action(action.toUpperCase())
+                .targetUserId(userId)
+                .targetEmail(user.getEmail())
+                .build());
+    }
+
+    // NFR 3.8.5 — retrieve audit log for admin dashboard
+    public List<Map<String, Object>> getAuditLogs() {
+        return auditLogRepository.findAllByOrderByPerformedAtDesc().stream().map(log -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id",            log.getId());
+            m.put("adminEmail",    log.getAdminEmail());
+            m.put("action",        log.getAction());
+            m.put("targetUserId",  log.getTargetUserId());
+            m.put("targetEmail",   log.getTargetEmail());
+            m.put("performedAt",   log.getPerformedAt().toString());
+            return m;
+        }).toList();
     }
 
     // UC-14 + ACD: generateGraphicalReport() — aggregates data and persists a GraphicalReport

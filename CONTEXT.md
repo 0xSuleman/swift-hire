@@ -74,7 +74,8 @@ com.swifthire/
 
 ### User (`users` table)
 `id, name, email, password(hashed), phoneNo, address, role(ADMIN/EMPLOYER/CANDIDATE),`
-`accountStatus(ACTIVE/BANNED/DEACTIVATED), failedLoginAttempts, averageRating, totalRatings, createdAt, updatedAt`
+`accountStatus(ACTIVE/BANNED/DEACTIVATED), failedLoginAttempts, averageRating, totalRatings,`
+`emailVerified, verificationToken, verificationTokenExpiry, createdAt, updatedAt`
 implements UserDetails; @Inheritance(JOINED)
 
 ### Admin (`admins` table) — extends User
@@ -132,6 +133,7 @@ unique: (rater_id, interview_slot_id)
 | POST | `/signup` | UC-06 | role: CANDIDATE or EMPLOYER only |
 | POST | `/login` | UC-01 | returns JWT + userId/name/email/role |
 | POST | `/logout` | UC-07 | client-side JWT discard |
+| GET  | `/verify-email` | NFR 3.4.4 | `?token=` — marks emailVerified=true; blocks login until verified |
 | POST | `/reset-password-request` | NFR 3.8.3 | generates UUID token, emails link (1h expiry) |
 | POST | `/reset-password` | NFR 3.8.3 | validates token, hashes new password, resets lock |
 
@@ -178,7 +180,8 @@ unique: (rater_id, interview_slot_id)
 |--------|------|----|
 | GET | `/users` | UC-13 |
 | GET | `/users/{userId}` | UC-13 |
-| PUT | `/users/{userId}/status` | UC-13 |
+| PUT | `/users/{userId}/status` | UC-13 — also writes AuditLog (NFR 3.8.5) |
+| GET | `/audit-logs` | NFR 3.8.5 |
 | GET | `/reports` | UC-14 |
 | GET | `/reports/export` | UC-14 | returns CSV file download |
 | GET | `/reports/history` | UC-14 |
@@ -216,6 +219,22 @@ All 17 UCs fully implemented and verified. ✅
 
 ---
 
+## Session 4 Changes (2026-03-16)
+
+### New Features
+- **NFR 3.4.4 — Email Verification**: UUID token generated on signup, 24h expiry stored on `User`; `GET /api/auth/verify-email?token=` verifies and unblocks login; frontend shows "Check Your Email" confirmation screen + new `VerifyEmail.jsx` page; `verifyEmail` is idempotent to handle React 18 StrictMode double-call
+- **GlobalExceptionHandler**: Added `IllegalStateException` handler (was falling through to generic 500)
+- **SQL grandfathering**: existing users updated to `email_verified=true` after column addition
+
+### Bug Fixes
+- React 18 StrictMode fires `useEffect` twice — `verifyEmail` backend now returns early if already verified instead of throwing on the second call
+
+### Docs Updated
+- `CONTEXT.md`, `README.md`, `CLAUDE.md`: updated for session 4 changes
+- `CLAUDE.md` Mistake Log: added StrictMode double-useEffect pattern
+
+---
+
 ## Session 3 Changes (2026-03-13)
 
 ### Fixes
@@ -241,7 +260,6 @@ All 17 UCs fully implemented and verified. ✅
 **Nothing remaining.** All 17 UCs + NFRs implemented and merged to `main`.
 
 ### Known NFR gaps (low priority, not blocking demo)
-- NFR 3.4.4: Email verification on signup — not implemented
 - NFR 3.8.5: Audit logs for account CRUD — not implemented
 - NFR 3.9.2: API rate limiting — not implemented (account lockout at 5 failures exists)
 
