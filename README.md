@@ -181,6 +181,8 @@ curl -s http://localhost:8080/api/auth/login \
 | BCrypt password hashing | `BCryptPasswordEncoder` bean |
 | JWT + configurable expiry | `jwt.expiry-ms` in properties |
 | Email verification on signup (NFR 3.4.4) | UUID token, 24h expiry, blocks login until verified |
+| Rate limiting (NFR 3.6.6) | Per-IP sliding window: 10 req/min on login, 100 req/min elsewhere → 429 |
+| Audit logs for admin actions (NFR 3.8.5) | Every approve/block/deactivate logged to `audit_logs` table |
 | Strong password (NFR 3.8.2) | `@Pattern` regex on `SignupRequest` |
 | Rate limit + lock at 5 failures | `failedLoginAttempts` on User entity |
 | PDF-only, ≤10MB upload | Validated in `CvParserService.validatePdf()` |
