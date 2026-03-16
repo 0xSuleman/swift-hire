@@ -31,3 +31,6 @@ Thumbs.db
 
 # Uploaded CVs (user data — not for version control)
 backend/uploads/
+
+# Diagrams / deliverable docs — not for version control
+docs/
