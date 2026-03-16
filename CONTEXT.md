@@ -223,6 +223,9 @@ All 17 UCs fully implemented and verified. ✅
 
 ### New Features
 - **NFR 3.4.4 — Email Verification**: UUID token generated on signup, 24h expiry stored on `User`; `GET /api/auth/verify-email?token=` verifies and unblocks login; frontend shows "Check Your Email" confirmation screen + new `VerifyEmail.jsx` page; `verifyEmail` is idempotent to handle React 18 StrictMode double-call
+- **NFR 3.6.6 — Rate Limiting**: `RateLimitInterceptor` + `WebConfig`; sliding 60s window per IP via `ConcurrentHashMap`; login capped at 10 req/min, all other `/api/**` at 100 req/min; returns 429 with `ApiResponse` error; limits configurable in `application.properties`
+- **NFR 3.8.4 — Account Lockout fix**: `@Transactional(noRollbackFor=...)` on `login()` — counter was silently rolling back on `BadCredentialsException`
+- **NFR 3.8.5 — Audit Logs**: `AuditLog` entity + `GET /api/admin/audit-logs`; every approve/block/deactivate action logged with admin email, target, and timestamp; shown in `ManageUsers.jsx`
 - **GlobalExceptionHandler**: Added `IllegalStateException` handler (was falling through to generic 500)
 - **SQL grandfathering**: existing users updated to `email_verified=true` after column addition
 
@@ -257,11 +260,10 @@ All 17 UCs fully implemented and verified. ✅
 ---
 
 ## Remaining TODOs
-**Nothing remaining.** All 17 UCs + NFRs implemented and merged to `main`.
+**Nothing remaining.** All 17 UCs + all NFRs implemented and merged to `main`.
 
-### Known NFR gaps (low priority, not blocking demo)
-- NFR 3.8.5: Audit logs for account CRUD — not implemented
-- NFR 3.9.2: API rate limiting — not implemented (account lockout at 5 failures exists)
+### Known NFR gaps
+**None.** All NFRs fully implemented as of 2026-03-16.
 
 ---
 
