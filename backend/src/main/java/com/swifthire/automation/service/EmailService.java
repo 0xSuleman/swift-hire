@@ -64,6 +64,21 @@ public class EmailService {
         send(toEmail, subject, body);
     }
 
+    // NFR 3.4.4: Email verification on signup
+    @Async
+    @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000))
+    public void sendVerificationEmail(String toEmail, String name, String verifyLink) {
+        String subject = "Swift Hire — Verify Your Email";
+        String body = String.format("""
+                <h2>Welcome to Swift Hire, %s!</h2>
+                <p>Thank you for signing up. Please verify your email address to activate your account.</p>
+                <p><a href="%s">Click here to verify your email</a></p>
+                <p>This link expires in <strong>24 hours</strong>. If you didn't create an account, ignore this email.</p>
+                <p>— Swift Hire Team</p>
+                """, name, verifyLink);
+        send(toEmail, subject, body);
+    }
+
     // NFR 3.8.3: Password reset email
     @Async
     @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000))

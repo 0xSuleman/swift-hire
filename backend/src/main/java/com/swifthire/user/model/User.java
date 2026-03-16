@@ -50,6 +50,13 @@ public class User implements UserDetails {
     @Builder.Default
     private int totalRatings = 0;
 
+    // NFR 3.4.4 — email verification
+    @Builder.Default
+    private boolean emailVerified = false;
+
+    private String verificationToken;
+    private LocalDateTime verificationTokenExpiry;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 

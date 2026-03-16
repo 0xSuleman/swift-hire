@@ -10,6 +10,7 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   const handleSubmit = async e => {
     e.preventDefault()
@@ -17,7 +18,7 @@ export default function Signup() {
     setLoading(true)
     try {
       await authApi.signup(form)
-      navigate('/login')
+      setSuccess(true)
     } catch (err) {
       setError(err.response?.data?.message || 'Sign up failed.')
     } finally {
@@ -44,6 +45,29 @@ export default function Signup() {
       </div>
     </div>
   )
+
+  if (success) {
+    return (
+      <AuthLayout
+        headingTeal="Check Your Email"
+        headingWhite="Verify Your Account"
+        tagline="One last step before you get started."
+      >
+        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px 0' }}>
+          <div style={{ fontSize: '3rem' }}>📧</div>
+          <p style={{ color: '#D1D5DB', fontSize: '0.9rem', lineHeight: 1.6 }}>
+            We've sent a verification link to <strong style={{ color: '#2EE5B0' }}>{form.email}</strong>.
+          </p>
+          <p style={{ color: '#6B7280', fontSize: '0.82rem' }}>
+            Please check your inbox and click the link to activate your account. The link expires in 24 hours.
+          </p>
+          <button className="btn-teal" style={{ marginTop: '8px' }} onClick={() => navigate('/login')}>
+            Go to Sign In
+          </button>
+        </div>
+      </AuthLayout>
+    )
+  }
 
   return (
     <AuthLayout
