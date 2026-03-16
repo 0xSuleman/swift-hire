@@ -36,13 +36,20 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getUserDetail(userId)));
     }
 
-    // UC-13: Approve / Block / Delete
+    // UC-13: Approve / Block / Delete — NFR 3.8.5: logs action to audit_logs
     @PutMapping("/users/{userId}/status")
     public ResponseEntity<ApiResponse<Void>> updateStatus(
             @PathVariable Long userId,
-            @RequestBody Map<String, String> body) {
-        adminService.updateUserStatus(userId, body.get("action"));
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        adminService.updateUserStatus(userId, body.get("action"), userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.ok("User status updated successfully.", null));
+    }
+
+    // NFR 3.8.5: Retrieve audit log
+    @GetMapping("/audit-logs")
+    public ResponseEntity<ApiResponse<Object>> getAuditLogs() {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getAuditLogs()));
     }
 
     // UC-14: Generate system report (ACD: generateGraphicalReport)

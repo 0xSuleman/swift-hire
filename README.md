@@ -51,7 +51,7 @@ swift-hire/
         ├── api/                      # axios instance + per-module API files
         ├── context/AuthContext.jsx   # JWT storage, login/logout
         ├── components/common/        # ProtectedRoute, StarRating
-        ├── pages/auth/               # Login, Signup, ResetPassword (request + token flows)
+        ├── pages/auth/               # Login, Signup, ResetPassword, VerifyEmail
         ├── pages/shared/             # MyInterviews (role-aware: candidate + employer)
         ├── pages/candidate/          # Dashboard, Profile, JobPostings, Analytics, RateEmployer
         ├── pages/employer/           # Dashboard, HiringPrompt, RecommendedCandidates,
@@ -180,6 +180,7 @@ curl -s http://localhost:8080/api/auth/login \
 | Page load ≤2s | React SPA, API pagination |
 | BCrypt password hashing | `BCryptPasswordEncoder` bean |
 | JWT + configurable expiry | `jwt.expiry-ms` in properties |
+| Email verification on signup (NFR 3.4.4) | UUID token, 24h expiry, blocks login until verified |
 | Strong password (NFR 3.8.2) | `@Pattern` regex on `SignupRequest` |
 | Rate limit + lock at 5 failures | `failedLoginAttempts` on User entity |
 | PDF-only, ≤10MB upload | Validated in `CvParserService.validatePdf()` |

@@ -58,3 +58,10 @@ It contains hard rules to follow and a running log of past mistakes to never rep
 - [2026-03-12] — A stale JWT after a backend restart causes Spring Security to return 403
   with its own error format (no `message` field), not our `ApiResponse`. Frontend fallback
   shows generic message. Fix: always log out and back in after a backend restart during testing.
+
+- [2026-03-16] — React 18 StrictMode mounts effects TWICE in development. Any `useEffect`
+  that fires a non-idempotent API call (e.g. a one-shot token consumption endpoint) will be
+  called twice: the first call succeeds and clears state (token nulled), the second call fails.
+  Fix: make the backend endpoint idempotent — detect "already done" and return success instead
+  of throwing. Never clear state that the endpoint uses to identify the resource before confirming
+  both calls are handled.
