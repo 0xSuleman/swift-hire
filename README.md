@@ -63,31 +63,27 @@ swift-hire/
 
 ## Running the App
 
-> **macOS:** Maven defaults to the Homebrew JDK. Always use the `JAVA_HOME` prefix below — skipping it runs Java 25 and the backend won't start.
+> **No extra config needed for testing.** Gmail SMTP credentials and DB defaults are already set in `application.properties`. All tables are auto-created on first run (`ddl-auto=update`).
 
-### 1. Start MySQL
+---
+
+### macOS
+
+**1. Start MySQL**
 ```bash
 brew services start mysql
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS swift_hire;"
 ```
 
-### 2. Start Backend
+**2. Start Backend**
+> Maven on macOS defaults to the Homebrew JDK. The `JAVA_HOME` prefix forces Java 17 — don't skip it.
 ```bash
 cd ~/Desktop/swift-hire/backend
 JAVA_HOME=/opt/homebrew/opt/openjdk@17 mvn spring-boot:run
 # API live at http://localhost:8080
 ```
 
-> **No extra config needed for testing.** Gmail SMTP credentials are already set as defaults in `application.properties`. The DB auto-creates all tables on first run (`ddl-auto=update`).
->
-> Only set these env vars if you want to override the defaults:
-> ```bash
-> export DB_PASSWORD=yourpassword        # default: empty
-> export MAIL_USERNAME=your@gmail.com    # default: team Gmail
-> export MAIL_PASSWORD=your-app-password # default: team app password
-> ```
-
-### 3. Start Frontend
+**3. Start Frontend**
 ```bash
 cd ~/Desktop/swift-hire/frontend
 npm install   # first time only
@@ -95,11 +91,44 @@ npm run dev
 # UI live at http://localhost:5173
 ```
 
+---
+
+### Windows
+
+**1. Start MySQL**
+
+Open MySQL Workbench or MySQL Shell and run:
+```sql
+CREATE DATABASE IF NOT EXISTS swift_hire;
+```
+Or if MySQL is in your PATH:
+```cmd
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS swift_hire;"
+```
+
+**2. Start Backend**
+
+Open Command Prompt or PowerShell in the `backend` folder, then:
+```cmd
+set JAVA_HOME=C:\Program Files\Java\jdk-17
+mvn spring-boot:run
+```
+> If `mvn` is not recognized, [download Maven](https://maven.apache.org/download.cgi) and add it to your PATH. Adjust the `JAVA_HOME` path to wherever Java 17 is installed on your machine.
+
+**3. Start Frontend**
+```cmd
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
 ### Quick Test (confirm backend is up)
 ```bash
 curl -s http://localhost:8080/api/auth/login \
   -X POST -H "Content-Type: application/json" \
-  -d '{"email":"test@test.com","password":"test"}'
+  -d "{\"email\":\"test@test.com\",\"password\":\"test\"}"
 # Expected: {"success":false,"message":"Invalid email or password."}
 ```
 
