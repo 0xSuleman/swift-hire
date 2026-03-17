@@ -75,7 +75,13 @@ brew services start mysql
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS swift_hire;"
 ```
 
-**2. Start Backend**
+**2. Seed Admin Account** *(run once after DB is created)*
+```bash
+mysql -u root swift_hire < ~/Desktop/swift-hire/seed_admin.sql
+# Login: admin@swifthire.com / Admin@1234
+```
+
+**3. Start Backend**
 > Maven on macOS defaults to the Homebrew JDK. The `JAVA_HOME` prefix forces Java 17 — don't skip it.
 ```bash
 cd ~/Desktop/swift-hire/backend
@@ -83,7 +89,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@17 mvn spring-boot:run
 # API live at http://localhost:8080
 ```
 
-**3. Start Frontend**
+**4. Start Frontend**
 ```bash
 cd ~/Desktop/swift-hire/frontend
 npm install   # first time only
@@ -106,7 +112,13 @@ Or if MySQL is in your PATH:
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS swift_hire;"
 ```
 
-**2. Start Backend**
+**2. Seed Admin Account** *(run once after DB is created)*
+```cmd
+mysql -u root swift_hire < seed_admin.sql
+rem Login: admin@swifthire.com / Admin@1234
+```
+
+**3. Start Backend**
 
 Open Command Prompt or PowerShell in the `backend` folder, then:
 ```cmd
@@ -115,7 +127,7 @@ mvn spring-boot:run
 ```
 > If `mvn` is not recognized, [download Maven](https://maven.apache.org/download.cgi) and add it to your PATH. Adjust the `JAVA_HOME` path to wherever Java 17 is installed on your machine.
 
-**3. Start Frontend**
+**4. Start Frontend**
 ```cmd
 cd frontend
 npm install
