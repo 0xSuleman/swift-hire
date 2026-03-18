@@ -4,7 +4,8 @@ import { employerApi } from '../../api/employerApi'
 import AppLayout from '../../components/common/AppLayout'
 import {
   Users, Star, MapPin, Briefcase, AlertCircle,
-  Loader2, ArrowRight, CheckSquare, Square, Calendar
+  Loader2, ArrowRight, CheckSquare, Square, Calendar,
+  Eye, X, MapPinIcon, Clock, Monitor
 } from 'lucide-react'
 
 function MatchBadge({ score }) {
@@ -18,6 +19,104 @@ function MatchBadge({ score }) {
   )
 }
 
+function CandidateProfileModal({ candidateId, onClose }) {
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    employerApi.getCandidateProfile(candidateId)
+      .then(res => setProfile(res.data.data))
+      .finally(() => setLoading(false))
+  }, [candidateId])
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '20px' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: '#13171B', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '85vh', overflowY: 'auto', padding: '28px' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#E8EAF0' }}>Candidate Profile</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4B5563', display: 'flex', padding: 4 }}
+            onMouseEnter={e => e.currentTarget.style.color = '#9CA3AF'}
+            onMouseLeave={e => e.currentTarget.style.color = '#4B5563'}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {loading && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+            <Loader2 size={22} style={{ color: '#2EE5B0', animation: 'spin 1s linear infinite' }} />
+          </div>
+        )}
+
+        {!loading && profile && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Name + Rating */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ margin: '0 0 4px', fontSize: '1.2rem', fontWeight: 700, color: '#E8EAF0' }}>{profile.name}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Star size={13} style={{ color: '#F59E0B', fill: '#F59E0B' }} />
+                  <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>
+                    {profile.averageRating.toFixed(1)} · {profile.totalRatings} review{profile.totalRatings !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Preferences */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {profile.preferredLocation && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <MapPinIcon size={14} style={{ color: '#4B5563', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>{profile.preferredLocation}</span>
+                </div>
+              )}
+              {profile.preferredShift && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Clock size={14} style={{ color: '#4B5563', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>{profile.preferredShift}</span>
+                </div>
+              )}
+              {profile.workType && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Monitor size={14} style={{ color: '#4B5563', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>{profile.workType}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Skills */}
+            {profile.parsedSkills && (
+              <div>
+                <p style={{ margin: '0 0 10px', fontSize: '0.75rem', fontWeight: 600, color: '#6B7280', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Skills</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {profile.parsedSkills.split(',').filter(Boolean).map(s => (
+                    <span key={s} style={{ padding: '4px 10px', borderRadius: 9999, background: 'rgba(46,229,176,0.06)', border: '1px solid rgba(46,229,176,0.15)', color: '#2EE5B0', fontSize: '0.75rem' }}>
+                      {s.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!profile.parsedSkills && !profile.preferredLocation && (
+              <p style={{ color: '#4B5563', fontSize: '0.85rem', textAlign: 'center', padding: '12px 0' }}>
+                This candidate hasn't completed their profile yet.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function RecommendedCandidates() {
   const { jobId }   = useParams()
   const navigate    = useNavigate()
@@ -25,6 +124,7 @@ export default function RecommendedCandidates() {
   const [selected, setSelected]     = useState([])
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState('')
+  const [viewingId, setViewingId]   = useState(null)
 
   useEffect(() => {
     employerApi.getCandidates(jobId)
@@ -42,6 +142,8 @@ export default function RecommendedCandidates() {
   }
 
   return (
+    <>
+    {viewingId && <CandidateProfileModal candidateId={viewingId} onClose={() => setViewingId(null)} />}
     <AppLayout>
       <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
@@ -177,6 +279,17 @@ export default function RecommendedCandidates() {
 
                   {/* Match badge */}
                   <MatchBadge score={c.matchScore} />
+
+                  {/* View profile */}
+                  <button
+                    onClick={e => { e.stopPropagation(); setViewingId(c.candidateId) }}
+                    style={{ background: 'none', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', color: '#4B5563', display: 'flex', alignItems: 'center', flexShrink: 0, transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(46,229,176,0.3)'; e.currentTarget.style.color = '#2EE5B0' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#4B5563' }}
+                    title="View profile"
+                  >
+                    <Eye size={14} />
+                  </button>
                 </div>
               )
             })}
@@ -184,5 +297,6 @@ export default function RecommendedCandidates() {
         </>
       )}
     </AppLayout>
+    </>
   )
 }
