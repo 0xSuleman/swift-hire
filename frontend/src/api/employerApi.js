@@ -11,6 +11,7 @@ export const employerApi = {
   getAnalytics:         ()               => api.get('/analytics/employer'),
   getMyInterviews:      ()                    => api.get('/schedule/my-interviews'),
   updateSlotStatus:     (slotId, status)      => api.patch(`/schedule/slots/${slotId}/status`, { status }),
+  getCandidateProfile:  (candidateId)    => api.get(`/employer/candidates/${candidateId}`),
   updateJob:            (jobId, data)    => api.put(`/jobs/${jobId}`, data),
   deleteJob:            (jobId)          => api.delete(`/jobs/${jobId}`),
 }

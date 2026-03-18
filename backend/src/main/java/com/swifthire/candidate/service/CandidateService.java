@@ -94,6 +94,23 @@ public class CandidateService {
         candidateRepository.save(candidate);
     }
 
+    // UC-03: Returns a candidate's public profile for employer view
+    public Map<String, Object> getCandidateProfileById(Long candidateId) {
+        Candidate candidate = candidateRepository.findById(candidateId)
+                .orElseThrow(() -> new ResourceNotFoundException("Candidate not found."));
+        var user = candidate.getUser();
+
+        Map<String, Object> profile = new LinkedHashMap<>();
+        profile.put("name",              user.getName());
+        profile.put("averageRating",     user.getAverageRating());
+        profile.put("totalRatings",      user.getTotalRatings());
+        profile.put("parsedSkills",      candidate.getParsedSkills());
+        profile.put("preferredLocation", candidate.getPreferredLocation());
+        profile.put("preferredShift",    candidate.getPreferredShift());
+        profile.put("workType",          candidate.getWorkType());
+        return profile;
+    }
+
     // UC-11: Returns ranked job postings for this candidate
     public List<Map<String, Object>> getRecommendedJobs(String email) {
         var user = userRepository.findByEmail(email)
