@@ -65,6 +65,33 @@ swift-hire/
 
 > **No extra config needed for testing.** Gmail SMTP credentials and DB defaults are already set in `application.properties`. All tables are auto-created on first run (`ddl-auto=update`).
 
+### Option A — With ngrok (Recommended for cross-device testing)
+Verification email links will work on any device, any network (phone, teammate's laptop, etc.).
+
+**Prerequisites:** [Sign up free at ngrok.com](https://ngrok.com) → install → authenticate once:
+```bash
+# macOS
+brew install ngrok
+ngrok config add-authtoken <your-token>
+
+# Windows — download from ngrok.com/download, then:
+ngrok config add-authtoken <your-token>
+```
+
+**Then just run the launcher script** (starts ngrok + backend automatically):
+```bash
+# macOS
+bash start-ngrok.sh
+
+# Windows — double-click start-ngrok.bat, or:
+start-ngrok.bat
+```
+Start frontend normally in a separate terminal: `npm run dev`
+
+---
+
+### Option B — Local only (same machine, no extra setup)
+
 ---
 
 ### macOS
@@ -211,3 +238,4 @@ curl -s http://localhost:8080/api/auth/login \
 - **Stale JWT**: after a backend restart, log out and back in — old tokens cause 403s without a `message` field
 - **`Map.of()` with mixed types**: use `LinkedHashMap` with explicit `put()` — `Map.of()` infers a complex intersection type incompatible with `Map<String, Object>`
 - **Jitsi Meet links**: `https://meet.jit.si/swift-hire-<12-char-uid>` — no API key needed; DB column still named `calendlyLink`
+- **Cross-device testing (phone/other machine on same WiFi)**: the email verification link uses `localhost` by default, which only works on the same machine. To test across devices: find your LAN IP (`ipconfig` on Windows, `ifconfig | grep 192` on macOS), then start the backend with `FRONTEND_URL=http://192.168.x.x:5173`. Vite already exposes on LAN via `host: true` in `vite.config.js`.

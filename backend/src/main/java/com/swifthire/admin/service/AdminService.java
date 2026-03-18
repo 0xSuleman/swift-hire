@@ -48,10 +48,6 @@ public class AdminService {
             users = userRepository.findAll();
         }
 
-        if (users.isEmpty()) {
-            throw new IllegalArgumentException("No users found matching the criteria.");
-        }
-
         return users.stream().map(u -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id",            u.getId());
