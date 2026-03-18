@@ -65,6 +65,33 @@ swift-hire/
 
 > **No extra config needed for testing.** Gmail SMTP credentials and DB defaults are already set in `application.properties`. All tables are auto-created on first run (`ddl-auto=update`).
 
+### Option A — With ngrok (Recommended for cross-device testing)
+Verification email links will work on any device, any network (phone, teammate's laptop, etc.).
+
+**Prerequisites:** [Sign up free at ngrok.com](https://ngrok.com) → install → authenticate once:
+```bash
+# macOS
+brew install ngrok
+ngrok config add-authtoken <your-token>
+
+# Windows — download from ngrok.com/download, then:
+ngrok config add-authtoken <your-token>
+```
+
+**Then just run the launcher script** (starts ngrok + backend automatically):
+```bash
+# macOS
+bash start-ngrok.sh
+
+# Windows — double-click start-ngrok.bat, or:
+start-ngrok.bat
+```
+Start frontend normally in a separate terminal: `npm run dev`
+
+---
+
+### Option B — Local only (same machine, no extra setup)
+
 ---
 
 ### macOS
