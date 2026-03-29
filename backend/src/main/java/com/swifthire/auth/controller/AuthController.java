@@ -37,6 +37,13 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("Logged out successfully.", null));
     }
 
+    // NFR 3.4.4: Resend verification email
+    @PostMapping("/resend-verification")
+    public ResponseEntity<ApiResponse<Void>> resendVerification(@RequestParam String email) {
+        authService.resendVerification(email);
+        return ResponseEntity.ok(ApiResponse.ok("Verification email resent.", null));
+    }
+
     // NFR 3.4.4: Email verification
     @GetMapping("/verify-email")
     public ResponseEntity<ApiResponse<Void>> verifyEmail(@RequestParam String token) {

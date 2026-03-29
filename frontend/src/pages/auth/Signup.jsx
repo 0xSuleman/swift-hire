@@ -11,6 +11,8 @@ export default function Signup() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendMsg, setResendMsg] = useState('')
 
   const handleSubmit = async e => {
     e.preventDefault()
@@ -64,6 +66,25 @@ export default function Signup() {
           <button className="btn-teal" style={{ marginTop: '8px' }} onClick={() => navigate('/login')}>
             Go to Sign In
           </button>
+          <button
+            style={{ background: 'none', border: 'none', color: resendMsg ? '#2EE5B0' : '#6B7280', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
+            disabled={resendLoading}
+            onClick={async () => {
+              setResendLoading(true)
+              setResendMsg('')
+              try {
+                await authApi.resendVerification(form.email)
+                setResendMsg('Email resent! Check your inbox.')
+              } catch {
+                setResendMsg('Failed to resend. Try again.')
+              } finally {
+                setResendLoading(false)
+              }
+            }}
+          >
+            {resendLoading ? 'Sending...' : "Didn't receive it? Resend email"}
+          </button>
+          {resendMsg && <p style={{ color: '#2EE5B0', fontSize: '0.8rem', margin: 0 }}>{resendMsg}</p>}
         </div>
       </AuthLayout>
     )

@@ -83,6 +83,22 @@ public class AuthService {
         emailService.sendVerificationEmail(user.getEmail(), user.getName(), verifyLink);
     }
 
+    // NFR 3.4.4: Resend verification email
+    @Transactional
+    public void resendVerification(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("No account found with that email."));
+        if (user.isEmailVerified()) {
+            return; // idempotent
+        }
+        String verToken = UUID.randomUUID().toString();
+        user.setVerificationToken(verToken);
+        user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+        userRepository.save(user);
+        String verifyLink = frontendUrl + "/verify-email?token=" + verToken;
+        emailService.sendVerificationEmail(user.getEmail(), user.getName(), verifyLink);
+    }
+
     // NFR 3.4.4: Verify email token
     @Transactional
     public void verifyEmail(String token) {

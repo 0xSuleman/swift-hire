@@ -7,4 +7,5 @@ export const authApi = {
   requestReset: (email)        => api.post(`/auth/reset-password-request?email=${encodeURIComponent(email)}`),
   resetPassword: (token, pwd)  => api.post(`/auth/reset-password?token=${encodeURIComponent(token)}&newPassword=${encodeURIComponent(pwd)}`),
   verifyEmail: (token)         => api.get(`/auth/verify-email?token=${token}`),
+  resendVerification: (email)  => api.post(`/auth/resend-verification?email=${encodeURIComponent(email)}`),
 }
