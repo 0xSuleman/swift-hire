@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
   LayoutDashboard, User, Briefcase, BarChart2,
-  Zap, Building2, Users, FileText, LogOut, CalendarDays,
+  Zap, Building2, Users, FileText, LogOut, CalendarDays, Menu, X,
 } from 'lucide-react'
 
 const NAV = {
@@ -36,6 +37,7 @@ const ROLE_BADGE = {
 export default function AppLayout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const navItems = NAV[user?.role] ?? []
   const badge    = ROLE_BADGE[user?.role]
 
@@ -44,11 +46,30 @@ export default function AppLayout({ children }) {
     navigate('/login')
   }
 
+  const closeSidebar = () => setSidebarOpen(false)
+
   return (
     <div className="app-layout">
 
+      {/* ── Mobile top bar ────────────────────────────────────────── */}
+      <div className="mobile-topbar">
+        <button className="mobile-menu-btn" onClick={() => setSidebarOpen(v => !v)}>
+          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+        <div className="mobile-topbar-logo">
+          <span className="sidebar-logo-teal">swift</span>
+          <span className="sidebar-logo-white">hire</span>
+        </div>
+      </div>
+
+      {/* ── Overlay (mobile) ─────────────────────────────────────── */}
+      <div
+        className={`sidebar-overlay${sidebarOpen ? ' visible' : ''}`}
+        onClick={closeSidebar}
+      />
+
       {/* ── Sidebar ──────────────────────────────────────────────── */}
-      <aside className="sidebar">
+      <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
 
         {/* Logo */}
         <div className="sidebar-logo">
@@ -68,6 +89,7 @@ export default function AppLayout({ children }) {
               className={({ isActive }) =>
                 `sidebar-nav-item${isActive ? ' active' : ''}`
               }
+              onClick={closeSidebar}
             >
               <Icon size={15} />
               {label}

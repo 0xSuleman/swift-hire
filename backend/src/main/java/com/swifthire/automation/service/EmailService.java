@@ -40,8 +40,8 @@ public class EmailService {
     private static final String TOKEN_URL       = "https://oauth2.googleapis.com/token";
     private static final DateTimeFormatter FMT  = DateTimeFormatter.ofPattern("EEE, MMM dd yyyy 'at' hh:mm a");
 
-    private final HttpClient   httpClient    = HttpClient.newHttpClient();
-    private final ObjectMapper objectMapper  = new ObjectMapper();
+    private final HttpClient   httpClient   = HttpClient.newHttpClient();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${google.sender.email}")
     private String senderEmail;
@@ -55,22 +55,116 @@ public class EmailService {
     @Value("${google.refresh.token}")
     private String refreshToken;
 
+    // ── Shared HTML wrapper ───────────────────────────────────────────────────
+    private String wrap(String content) {
+        return """
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+              <meta charset="UTF-8"/>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+              <title>Swift Hire</title>
+            </head>
+            <body style="margin:0;padding:0;background:#0D0F11;font-family:'Segoe UI',Arial,sans-serif;">
+              <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:#0D0F11;padding:40px 16px;">
+                <tr><td align="center">
+                  <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+
+                    <!-- Logo header -->
+                    <tr>
+                      <td align="center" style="padding-bottom:28px;">
+                        <span style="font-size:24px;font-weight:900;letter-spacing:0.04em;text-transform:lowercase;">
+                          <span style="color:#2EE5B0;">swift</span><span style="color:#E8EAF0;">hire</span>
+                        </span>
+                      </td>
+                    </tr>
+
+                    <!-- Card -->
+                    <tr>
+                      <td style="background:#13171B;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:36px 32px;box-shadow:0 24px 64px rgba(0,0,0,0.5);">
+
+                        <!-- Teal top accent bar -->
+                        <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+                          <tr><td style="height:3px;background:linear-gradient(90deg,#2EE5B0,#00c9a7);border-radius:2px;"></td></tr>
+                        </table>
+
+                        %s
+
+                      </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                      <td align="center" style="padding-top:28px;">
+                        <p style="margin:0;font-size:11px;color:#374151;">© 2026 Swift Hire. All Rights Reserved.</p>
+                        <p style="margin:4px 0 0;font-size:11px;color:#374151;">This is an automated message — please do not reply.</p>
+                      </td>
+                    </tr>
+
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """.formatted(content);
+    }
+
+    private String tealButton(String href, String label) {
+        return """
+            <table cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+              <tr>
+                <td align="center" style="background:linear-gradient(135deg,#2EE5B0,#00c9a7);border-radius:9999px;padding:0;">
+                  <a href="%s" style="display:inline-block;padding:14px 32px;color:#052015;font-size:15px;font-weight:700;text-decoration:none;border-radius:9999px;letter-spacing:0.01em;">%s</a>
+                </td>
+              </tr>
+            </table>
+            """.formatted(href, label);
+    }
+
+    private String heading(String text) {
+        return "<h1 style=\"margin:0 0 12px;font-size:22px;font-weight:800;color:#E8EAF0;\">" + text + "</h1>";
+    }
+
+    private String subtext(String text) {
+        return "<p style=\"margin:0 0 16px;font-size:14px;color:#9CA3AF;line-height:1.7;\">" + text + "</p>";
+    }
+
+    private String infoRow(String label, String value) {
+        return """
+            <tr>
+              <td style="padding:10px 14px;font-size:13px;color:#6B7280;font-weight:500;border-bottom:1px solid rgba(255,255,255,0.05);">%s</td>
+              <td style="padding:10px 14px;font-size:13px;color:#E8EAF0;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.05);">%s</td>
+            </tr>
+            """.formatted(label, value);
+    }
+
+    private String infoTable(String rows) {
+        return """
+            <table width="100%%" cellpadding="0" cellspacing="0" border="0"
+              style="background:#0D0F11;border:1px solid rgba(255,255,255,0.07);border-radius:10px;margin:20px 0;">
+              <tbody>%s</tbody>
+            </table>
+            """.formatted(rows);
+    }
+
     // UC-04: Interview invitation email
     @Async
     @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000))
     public void sendInterviewInvitation(String toEmail, String name,
                                         LocalDateTime start, LocalDateTime end,
                                         String calendlyLink) {
-        String subject = "Swift Hire — Interview Scheduled";
-        String body = String.format("""
-                <h2>Hello %s,</h2>
-                <p>Your interview has been scheduled.</p>
-                <p><strong>Date/Time:</strong> %s – %s</p>
-                <p><strong>Meeting Link:</strong> <a href="%s">%s</a></p>
-                <p>Good luck!</p>
-                <p>— Swift Hire Team</p>
-                """, name, start.format(FMT), end.format(FMT), calendlyLink, calendlyLink);
-        send(toEmail, subject, body);
+        String subject = "Swift Hire — Your Interview is Scheduled";
+        String content = heading("Interview Scheduled 🎉")
+                + subtext("Hi <strong style=\"color:#E8EAF0;\">" + name + "</strong>, great news! Your interview has been scheduled. Here are the details:")
+                + infoTable(
+                    infoRow("Date &amp; Time", start.format(FMT) + " – " + end.format(DateTimeFormatter.ofPattern("hh:mm a")))
+                  + infoRow("Platform", "Jitsi Meet (no download required)")
+                  + infoRow("Meeting Link", "<a href=\"" + calendlyLink + "\" style=\"color:#2EE5B0;text-decoration:none;\">" + calendlyLink + "</a>")
+                )
+                + tealButton(calendlyLink, "Join Meeting")
+                + subtext("If you have any questions, reach out to your employer through the Swift Hire platform.")
+                + "<p style=\"margin:0;font-size:13px;color:#4B5563;\">Good luck! 🚀</p>";
+        send(toEmail, subject, wrap(content));
     }
 
     // UC-15: Reminder email
@@ -80,29 +174,29 @@ public class EmailService {
                                       LocalDateTime interviewTime, String calendlyLink,
                                       String daysLabel) {
         String subject = "Swift Hire — Interview Reminder (" + daysLabel + ")";
-        String body = String.format("""
-                <h2>Hello %s,</h2>
-                <p>This is a reminder that your interview is <strong>%s</strong>.</p>
-                <p><strong>Scheduled for:</strong> %s</p>
-                <p><strong>Meeting Link:</strong> <a href="%s">%s</a></p>
-                <p>— Swift Hire Team</p>
-                """, name, daysLabel, interviewTime.format(FMT), calendlyLink, calendlyLink);
-        send(toEmail, subject, body);
+        String content = heading("Reminder: Interview " + daysLabel)
+                + subtext("Hi <strong style=\"color:#E8EAF0;\">" + name + "</strong>, this is a friendly reminder about your upcoming interview.")
+                + infoTable(
+                    infoRow("Scheduled For", interviewTime.format(FMT))
+                  + infoRow("Platform", "Jitsi Meet")
+                  + infoRow("Meeting Link", "<a href=\"" + calendlyLink + "\" style=\"color:#2EE5B0;text-decoration:none;\">" + calendlyLink + "</a>")
+                )
+                + tealButton(calendlyLink, "Join Meeting")
+                + subtext("Make sure you're prepared and on time. Best of luck! 🌟");
+        send(toEmail, subject, wrap(content));
     }
 
     // NFR 3.4.4: Email verification
     @Async
     @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000))
     public void sendVerificationEmail(String toEmail, String name, String verifyLink) {
-        String subject = "Swift Hire — Verify Your Email";
-        String body = String.format("""
-                <h2>Welcome to Swift Hire, %s!</h2>
-                <p>Please verify your email address to activate your account.</p>
-                <p><a href="%s">Click here to verify your email</a></p>
-                <p>This link expires in <strong>24 hours</strong>.</p>
-                <p>— Swift Hire Team</p>
-                """, name, verifyLink);
-        send(toEmail, subject, body);
+        String subject = "Swift Hire — Verify Your Email Address";
+        String content = heading("Verify Your Email")
+                + subtext("Welcome to Swift Hire, <strong style=\"color:#E8EAF0;\">" + name + "</strong>! You're one step away from getting started.")
+                + subtext("Click the button below to verify your email address and activate your account.")
+                + tealButton(verifyLink, "Verify My Account")
+                + "<p style=\"margin:16px 0 0;font-size:12px;color:#4B5563;\">This link expires in <strong>24 hours</strong>. If you didn't create an account, you can safely ignore this email.</p>";
+        send(toEmail, subject, wrap(content));
     }
 
     // NFR 3.8.3: Password reset email
@@ -110,19 +204,15 @@ public class EmailService {
     @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000))
     public void sendPasswordResetEmail(String toEmail, String name, String resetLink) {
         String subject = "Swift Hire — Password Reset Request";
-        String body = String.format("""
-                <h2>Hello %s,</h2>
-                <p>We received a request to reset your Swift Hire password.</p>
-                <p><a href="%s">Click here to reset your password</a></p>
-                <p>This link expires in <strong>1 hour</strong>.</p>
-                <p>— Swift Hire Team</p>
-                """, name, resetLink);
-        send(toEmail, subject, body);
+        String content = heading("Reset Your Password")
+                + subtext("Hi <strong style=\"color:#E8EAF0;\">" + name + "</strong>, we received a request to reset your Swift Hire password.")
+                + tealButton(resetLink, "Reset My Password")
+                + "<p style=\"margin:16px 0 0;font-size:12px;color:#4B5563;\">This link expires in <strong>1 hour</strong>. If you didn't request a password reset, please ignore this email — your account is safe.</p>";
+        send(toEmail, subject, wrap(content));
     }
 
     private void send(String to, String subject, String htmlBody) {
         try {
-            // Build MIME message using a dummy session (no SMTP transport used)
             Session session = Session.getInstance(new Properties());
             MimeMessage mimeMessage = new MimeMessage(session);
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
@@ -131,15 +221,12 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setText(htmlBody, true);
 
-            // Encode message to Base64URL (Gmail API requirement)
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             mimeMessage.writeTo(buffer);
             String encodedEmail = Base64.getUrlEncoder().encodeToString(buffer.toByteArray());
 
-            // Get fresh access token via refresh token
             String accessToken = fetchAccessToken();
 
-            // POST to Gmail REST API
             Map<String, String> payload = new LinkedHashMap<>();
             payload.put("raw", encodedEmail);
             String json = objectMapper.writeValueAsString(payload);
