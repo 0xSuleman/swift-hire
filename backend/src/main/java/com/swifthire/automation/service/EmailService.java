@@ -1,43 +1,33 @@
 package com.swifthire.automation.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * BE4 — Email Service (UC-04, UC-15)
  * NFR 3.7.1: ≥95% delivery reliability
  * NFR 3.7.2: retry up to 3 times on failure
- * Sends via Resend HTTP API (not SMTP) to work on Render free tier.
+ * NFR 3.10.1: SMTP integration
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class EmailService {
 
-    private static final String RESEND_URL = "https://api.resend.com/emails";
+    private final JavaMailSender mailSender;
+
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("EEE, MMM dd yyyy 'at' hh:mm a");
-
-    private final HttpClient httpClient = HttpClient.newHttpClient();
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
-    @Value("${resend.api-key}")
-    private String apiKey;
-
-    @Value("${resend.from-email:onboarding@resend.dev}")
-    private String fromEmail;
 
     // UC-04: Interview invitation email
     @Async
@@ -106,32 +96,14 @@ public class EmailService {
 
     private void send(String to, String subject, String htmlBody) {
         try {
-            Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("from", fromEmail);
-            payload.put("to", new String[]{to});
-            payload.put("subject", subject);
-            payload.put("html", htmlBody);
-
-            String json = objectMapper.writeValueAsString(payload);
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(RESEND_URL))
-                    .header("Authorization", "Bearer " + apiKey)
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(json))
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                log.info("Email sent to {} via Resend: {}", to, subject);
-            } else {
-                log.error("Resend API error {}: {}", response.statusCode(), response.body());
-                throw new RuntimeException("Resend API returned " + response.statusCode());
-            }
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
+            MimeMessage msg = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(msg, true);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
+            mailSender.send(msg);
+            log.info("Email sent to {}: {}", to, subject);
+        } catch (MessagingException e) {
             log.error("Failed to send email to {}: {}", to, e.getMessage());
             throw new RuntimeException("Email delivery failed.", e);
         }
