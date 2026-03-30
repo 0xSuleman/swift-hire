@@ -132,7 +132,7 @@ export default function ManageUsers() {
             <p style={{ color: '#4B5563', fontSize: '0.875rem', padding: '20px 0' }}>No users found matching the criteria.</p>
           )}
           {users.map(u => (
-            <div key={u.id} className="app-card" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px' }}>
+            <div key={u.id} className="app-card" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px', flexWrap: 'wrap' }}>
 
               {/* Avatar */}
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${ROLE_COLOR[u.role]}18`, border: `1px solid ${ROLE_COLOR[u.role]}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

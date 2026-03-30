@@ -174,7 +174,7 @@ export default function CandidateAnalytics() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* Row 1: interview status doughnut + outcome doughnut + radar */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
+        <div className="three-col-grid">
           <div className="app-card">
             <p style={{ margin: '0 0 12px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Interview Status</p>
             {hasInterviews
@@ -201,7 +201,7 @@ export default function CandidateAnalytics() {
 
         {/* Row 2: ATS bar + ATS horizontal bar */}
         {hasMatches && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div className="two-col-grid">
             <div className="app-card">
               <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>ATS Score per Job</p>
               <Bar data={atsBar} options={{ ...darkGrid, responsive: true }} />

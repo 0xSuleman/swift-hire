@@ -145,7 +145,7 @@ export default function RecommendedCandidates() {
     <>
     {viewingId && <CandidateProfileModal candidateId={viewingId} onClose={() => setViewingId(null)} />}
     <AppLayout>
-      <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+      <div className="page-header-flex">
         <div>
           <h1 className="page-title">Recommended Candidates</h1>
           <p className="page-subtitle">Ranked by ATS score. Select candidates to schedule interviews.</p>

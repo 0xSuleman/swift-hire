@@ -123,7 +123,7 @@ export default function Profile() {
 
       <Toast msg={toast.msg} type={toast.type} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div className="two-col-grid">
 
         {/* ── Left column ── */}
         <div>

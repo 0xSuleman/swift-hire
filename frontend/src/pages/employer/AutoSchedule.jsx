@@ -112,7 +112,7 @@ export default function AutoSchedule() {
               </div>
             </Field>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="two-col-grid" style={{ gap: 14 }}>
               <Field label="Start Time">
                 <div style={{ position: 'relative' }}>
                   <Clock size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#4B5563', pointerEvents: 'none' }} />

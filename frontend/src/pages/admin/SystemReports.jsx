@@ -90,7 +90,7 @@ export default function SystemReports() {
             </div>
 
             {/* Date range */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="two-col-grid" style={{ gap: 14 }}>
               {[['from', 'From'], ['to', 'To']].map(([key, label]) => (
                 <div key={key}>
                   <label style={{ display: 'block', fontSize: '0.78rem', color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>{label}</label>

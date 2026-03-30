@@ -159,7 +159,7 @@ export default function EmployerAnalytics() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* Row 1: slots bar + acceptance doughnut */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 20, alignItems: 'start' }}>
+          <div className="chart-main-side">
             <div className="app-card">
               <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Interview Slots per Job</p>
               <Bar data={slotsBar} options={{ ...darkGrid, responsive: true }} />
@@ -178,7 +178,7 @@ export default function EmployerAnalytics() {
           </div>
 
           {/* Row 3: job status pie + accepted slots bar */}
-          <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 20, alignItems: 'start' }}>
+          <div className="chart-side-main">
             <div className="app-card">
               <p style={{ margin: '0 0 12px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Job Status Distribution</p>
               <Pie data={statusPie} options={{ plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } } }} />

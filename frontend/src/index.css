@@ -450,3 +450,49 @@
   font-size: 0.8125rem;
   animation: slideDown 0.25s ease forwards;
 }
+
+/* ── Responsive grid layouts ───────────────────────────────────── */
+.two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.three-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+.chart-main-side {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 20px;
+  align-items: start;
+}
+
+.chart-side-main {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .two-col-grid,
+  .three-col-grid,
+  .chart-main-side,
+  .chart-side-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Page header with action button (flex row → wraps on mobile) ─ */
+.page-header-flex {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
