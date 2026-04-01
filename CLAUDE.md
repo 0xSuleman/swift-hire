@@ -17,6 +17,7 @@ It contains hard rules to follow and a running log of past mistakes to never rep
 8. No external AI APIs — all NLP/matching is custom Regex + KnownSkillsDictionary.
 9. Backend package root is `com.swifthire`. Never change this.
 10. Frontend runs on Vite (port 5173), proxied to Spring Boot (port 8080).
+11. ALWAYS push changes to `suleman` remote (0xSuleman/swift-hire) only. NEVER push to `origin` (Saad-2006/swift-hire).
 
 ---
 

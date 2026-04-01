@@ -61,11 +61,6 @@ public class JobService {
         // Run ATS scoring immediately
         List<MatchScore> scores = atsScoreService.scoreAndRank(job);
 
-        if (scores.isEmpty()) {
-            throw new IllegalArgumentException(
-                "No matching candidates found. Try changing skills/experience/location.");
-        }
-
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("jobPostingId", job.getId());
         result.put("jobTitle", job.getJobTitle());
