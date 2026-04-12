@@ -68,6 +68,7 @@ public class JobService {
         return result;
     }
 
+    @Transactional
     public List<Map<String, Object>> getRankedCandidates(String email, Long jobId) {
         // Increment profile view counter for each candidate returned
         List<MatchScore> scores = matchScoreRepository.findByJobPostingIdOrderByRankingAsc(jobId);
