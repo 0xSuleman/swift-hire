@@ -1,12 +1,8 @@
 package com.swifthire.job.model;
 
-import com.swifthire.dictionary.model.KnownSkillsDictionary;
 import com.swifthire.user.model.Employer;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import java.time.LocalDateTime;
 
@@ -36,16 +32,6 @@ public class JobPosting {
     private String location;
     private String shift;
     private Integer experienceYears;
-
-    // ACD: JobPosting Uses KnownSkillsDictionary (0..*:0..*)
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "job_skill_tags",
-            joinColumns = @JoinColumn(name = "job_posting_id"),
-            inverseJoinColumns = @JoinColumn(name = "skill_id")
-    )
-    @Builder.Default
-    private List<KnownSkillsDictionary> skillTags = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
