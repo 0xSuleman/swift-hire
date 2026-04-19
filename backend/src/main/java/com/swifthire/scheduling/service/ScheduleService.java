@@ -35,10 +35,12 @@ public class ScheduleService {
     private final EmployerRepository employerRepository;
     private final EmailService emailService;
 
+    public record ScheduleResult(List<InterviewSlot> slots, boolean allEmailsSent) {}
+
     @Transactional
-    public List<InterviewSlot> scheduleBatch(Long jobPostingId,
-                                              List<Long> candidateIds,
-                                              InterviewWindow window) {
+    public ScheduleResult scheduleBatch(Long jobPostingId,
+                                        List<Long> candidateIds,
+                                        InterviewWindow window) {
         LocalDateTime windowStart = LocalDateTime.of(window.getDate(), window.getStartTime());
         LocalDateTime windowEnd   = LocalDateTime.of(window.getDate(), window.getEndTime());
 
@@ -69,6 +71,7 @@ public class ScheduleService {
 
         List<InterviewSlot> result = new ArrayList<>();
         LocalDateTime cursor = windowStart;
+        boolean allEmailsSent = true;
 
         for (Long candidateId : candidateIds) {
             Candidate candidate = candidateRepository.findById(candidateId)
@@ -88,15 +91,16 @@ public class ScheduleService {
 
             result.add(slotRepository.save(slot));
 
-            // Email invitation to candidate and employer (UC-04)
-            emailService.sendInterviewInvitation(candidate.getUser().getEmail(),
+            // UC-04: send invitations synchronously so we know if they succeeded
+            boolean candidateSent = emailService.trySendInvitation(candidate.getUser().getEmail(),
                     candidate.getUser().getName(), cursor, slotEnd, link);
-            emailService.sendInterviewInvitation(window.getEmployer().getUser().getEmail(),
+            boolean employerSent  = emailService.trySendInvitation(window.getEmployer().getUser().getEmail(),
                     window.getEmployer().getUser().getName(), cursor, slotEnd, link);
+            if (!candidateSent || !employerSent) allEmailsSent = false;
 
             cursor = slotEnd;
         }
 
-        return result;
+        return new ScheduleResult(result, allEmailsSent);
     }
 }

@@ -69,7 +69,13 @@ export default function Profile() {
 
   const uploadCv = async e => {
     e.preventDefault()
-    if (!file) return
+    if (!file) { notify('Please add a PDF file.', 'err'); return }
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      notify('Please add a PDF file.', 'err'); return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      notify('File size exceeds the allowed limit.', 'err'); return
+    }
     setCvLoading(true)
     try {
       await candidateApi.uploadCv(file)

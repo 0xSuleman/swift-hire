@@ -17,6 +17,19 @@ export default function Signup() {
   const handleSubmit = async e => {
     e.preventDefault()
     setError('')
+    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
+      setError('Fill all the required fields.')
+      return
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(form.email.trim())) {
+      setError('Invalid email format.')
+      return
+    }
+    if (form.password.length < 8) {
+      setError('Please enter a strong password. Minimum 8 characters.')
+      return
+    }
     setLoading(true)
     try {
       await authApi.signup(form)
@@ -96,7 +109,7 @@ export default function Signup() {
       headingWhite="Create Your Account"
       tagline="Swift Hire connects top talent with great companies."
     >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
         {/* Role selector */}
         <div>

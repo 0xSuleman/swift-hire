@@ -121,7 +121,7 @@ public class AuthService {
     @Transactional(noRollbackFor = {BadCredentialsException.class, IllegalArgumentException.class, IllegalStateException.class})
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BadCredentialsException("Invalid email or password."));
+                .orElseThrow(() -> new IllegalArgumentException("Unregistered email, please register first."));
 
         // NFR 3.4.4 — email verification check
         if (!user.isEmailVerified()) {

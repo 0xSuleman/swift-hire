@@ -16,6 +16,15 @@ export default function Login() {
   const handleSubmit = async e => {
     e.preventDefault()
     setError('')
+    if (!form.email.trim() || !form.password.trim()) {
+      setError('Email and password are required.')
+      return
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(form.email.trim())) {
+      setError('Enter a valid email address.')
+      return
+    }
     setLoading(true)
     try {
       const res = await authApi.login(form)
@@ -36,7 +45,7 @@ export default function Login() {
       headingWhite="Sign In to Swift Hire"
       tagline="Your next great hire — or role — is one click away."
     >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
         {/* Email */}
         <div>

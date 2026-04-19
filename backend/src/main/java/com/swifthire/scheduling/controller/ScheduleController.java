@@ -71,10 +71,13 @@ public class ScheduleController {
                 .build();
         windowRepository.save(window);
 
-        List<InterviewSlot> slots = scheduleService.scheduleBatch(jobPostingId, candidateIds, window);
+        ScheduleService.ScheduleResult result = scheduleService.scheduleBatch(jobPostingId, candidateIds, window);
 
-        return ResponseEntity.ok(ApiResponse.ok(
-                "Schedule created. Invitations sent to " + slots.size() + " candidate(s).", slots.size()));
+        String message = result.allEmailsSent()
+                ? "Schedule created. Invitations sent to " + result.slots().size() + " candidate(s)."
+                : "Schedule created, but invitations could not be sent. Try again later.";
+
+        return ResponseEntity.ok(ApiResponse.ok(message, result.slots().size()));
     }
 
     // UC-04 / UC-11: Return scheduled slots for the logged-in candidate or employer

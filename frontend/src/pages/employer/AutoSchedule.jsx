@@ -32,19 +32,21 @@ export default function AutoSchedule() {
   const [error, setError]    = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone]       = useState(false)
+  const [doneMsg, setDoneMsg] = useState('')
 
   const handleSubmit = async e => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      await employerApi.scheduleBatch({
+      const res = await employerApi.scheduleBatch({
         jobPostingId: jobId,
         candidateIds: selectedIds,
         date: window_.date,
         startTime: window_.startTime + ':00',
         endTime: window_.endTime + ':00',
       })
+      setDoneMsg(res.data.message || 'Schedule created.')
       setDone(true)
     } catch (err) {
       setError(err.response?.data?.message || 'Scheduling failed.')
@@ -53,17 +55,26 @@ export default function AutoSchedule() {
     }
   }
 
-  // ── Success state ──────────────────────────────────────────────
+  // ── Done state ─────────────────────────────────────────────────
+  const emailsFailed = doneMsg.includes('could not be sent')
   if (done) return (
     <AppLayout>
       <div style={{ maxWidth: 480, margin: '60px auto', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16 }}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(46,229,176,0.1)', border: '1px solid rgba(46,229,176,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 32px rgba(46,229,176,0.15)' }}>
-          <CheckCircle2 size={28} style={{ color: '#2EE5B0' }} />
+        <div style={{
+          width: 64, height: 64, borderRadius: '50%',
+          background: emailsFailed ? 'rgba(245,158,11,0.1)' : 'rgba(46,229,176,0.1)',
+          border: `1px solid ${emailsFailed ? 'rgba(245,158,11,0.3)' : 'rgba(46,229,176,0.25)'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: `0 0 32px ${emailsFailed ? 'rgba(245,158,11,0.15)' : 'rgba(46,229,176,0.15)'}`,
+        }}>
+          <CheckCircle2 size={28} style={{ color: emailsFailed ? '#F59E0B' : '#2EE5B0' }} />
         </div>
         <div>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#E8EAF0', margin: '0 0 8px' }}>Interviews Scheduled!</h2>
-          <p style={{ color: '#6B7280', fontSize: '0.875rem', margin: 0 }}>
-            Invitations sent to <span style={{ color: '#2EE5B0', fontWeight: 600 }}>{selectedIds.length}</span> candidate{selectedIds.length !== 1 ? 's' : ''}.
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#E8EAF0', margin: '0 0 8px' }}>
+            {emailsFailed ? 'Schedule Created' : 'Interviews Scheduled!'}
+          </h2>
+          <p style={{ color: emailsFailed ? '#F59E0B' : '#6B7280', fontSize: '0.875rem', margin: 0 }}>
+            {doneMsg}
           </p>
         </div>
         <button onClick={() => navigate('/employer')} className="btn-teal" style={{ width: 'auto', padding: '10px 28px', marginTop: 8 }}>

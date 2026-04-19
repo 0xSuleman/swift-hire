@@ -135,6 +135,13 @@ export default function EmployerAnalytics() {
         <p className="page-subtitle">Overview of your company's hiring performance on Swift Hire.</p>
       </div>
 
+      {noData && !hasRatings && (
+        <div className="app-card" style={{ textAlign: 'center', padding: '40px 24px', marginBottom: 24, color: '#4B5563' }}>
+          <p style={{ margin: 0, fontSize: '0.95rem' }}>No Data Available</p>
+          <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#374151' }}>Post jobs and schedule interviews to see analytics here.</p>
+        </div>
+      )}
+
       {/* Stat cards */}
       <div className="stat-grid" style={{ marginBottom: 28 }}>
         {stats.map(({ label, value, Icon, color, suffix }) => (

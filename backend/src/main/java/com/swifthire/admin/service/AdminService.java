@@ -168,7 +168,7 @@ public class AdminService {
                 reportData.put("totalEmployers",    userRepository.findByRole(Role.EMPLOYER).size());
             }
             default -> throw new IllegalArgumentException(
-                    "Unknown category. Use: users, jobs, ratings, analytics.");
+                    "Invalid filter. Please enter valid criteria.");
         }
 
         // Persist GraphicalReport (ACD: Admin Views GraphicalReport 1:0..*)
