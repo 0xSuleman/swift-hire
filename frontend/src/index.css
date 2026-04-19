@@ -23,7 +23,7 @@
   body {
     background: #0D0F11;
     color: #E8EAF0;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 }
@@ -220,6 +220,7 @@
 .sidebar-overlay.visible { display: block; }
 
 .sidebar-logo {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 1.25rem;
   font-weight: 900;
   letter-spacing: 0.02em;
@@ -376,7 +377,7 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .page-title { font-size: 1.2rem; }
+  .page-title { font-size: 1.5rem; }
 
   .app-card { padding: 16px; }
 }
@@ -387,13 +388,16 @@
 }
 
 .page-title {
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
   color: #E8EAF0;
-  margin: 0 0 4px;
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
 }
 
 .page-subtitle {
+  font-family: 'Montserrat', system-ui, sans-serif;
   font-size: 0.85rem;
   color: #6B7280;
   margin: 0;
@@ -425,8 +429,9 @@
 }
 
 .stat-value {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 800;
   color: #E8EAF0;
   margin: 0 0 4px;
 }
