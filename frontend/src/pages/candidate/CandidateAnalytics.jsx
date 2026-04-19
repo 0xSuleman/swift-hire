@@ -148,6 +148,8 @@ export default function CandidateAnalytics() {
   const hasInterviews = (data?.interviewCount ?? 0) > 0
   const hasMatches    = topMatches.length > 0
   const hasRatings    = (data?.averageRating ?? 0) > 0
+  const hasNoData     = !hasInterviews && (data?.profileViews ?? 0) === 0 &&
+                        !hasRatings && (data?.parsedSkillsCount ?? 0) === 0
 
   return (
     <AppLayout>
@@ -155,6 +157,13 @@ export default function CandidateAnalytics() {
         <h1 className="page-title">My Analytics</h1>
         <p className="page-subtitle">Track how employers are discovering your profile.</p>
       </div>
+
+      {hasNoData && (
+        <div className="app-card" style={{ textAlign: 'center', padding: '40px 24px', marginBottom: 24, color: '#4B5563' }}>
+          <p style={{ margin: 0, fontSize: '0.95rem' }}>No Data Available</p>
+          <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#374151' }}>Complete your profile and attend interviews to see analytics here.</p>
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="stat-grid" style={{ marginBottom: 28 }}>

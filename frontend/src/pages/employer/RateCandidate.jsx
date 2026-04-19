@@ -4,6 +4,7 @@ import { employerApi } from '../../api/employerApi'
 import AppLayout from '../../components/common/AppLayout'
 import { Star, AlertCircle, Loader2, CheckCircle2, User, Briefcase } from 'lucide-react'
 
+
 const LABELS = { 1: 'Poor', 2: 'Fair', 3: 'Good', 4: 'Very Good', 5: 'Excellent' }
 
 export default function RateCandidate() {
@@ -15,6 +16,7 @@ export default function RateCandidate() {
   const [comment, setComment] = useState('')
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   useEffect(() => {
     employerApi.getSlot(slotId)
@@ -28,7 +30,8 @@ export default function RateCandidate() {
     setLoading(true)
     try {
       await employerApi.rateCandidate({ slotId: Number(slotId), rating, comment })
-      navigate('/employer')
+      setSuccess(true)
+      setTimeout(() => navigate('/employer'), 1800)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit rating.')
     } finally {
@@ -115,13 +118,19 @@ export default function RateCandidate() {
               </p>
             </div>
 
+            {success && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(46,229,176,0.08)', border: '1px solid rgba(46,229,176,0.25)', color: '#2EE5B0', fontSize: '0.82rem' }}>
+                <CheckCircle2 size={15} /> Rating submitted successfully.
+              </div>
+            )}
+
             {error && (
               <div className="error-banner">
                 <AlertCircle size={15} style={{ flexShrink: 0 }} /> {error}
               </div>
             )}
 
-            <button type="submit" className="btn-teal" disabled={loading || !rating}>
+            <button type="submit" className="btn-teal" disabled={loading || !rating || success}>
               {loading
                 ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                     <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Submitting...

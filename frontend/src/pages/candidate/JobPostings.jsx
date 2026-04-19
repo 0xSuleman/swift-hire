@@ -80,8 +80,7 @@ export default function JobPostings() {
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Briefcase size={20} style={{ color: '#4B5563' }} />
           </div>
-          <p style={{ color: '#6B7280', fontSize: '0.9rem', margin: 0 }}>No matching jobs found.</p>
-          <p style={{ color: '#4B5563', fontSize: '0.8rem', margin: 0 }}>Try updating your preferences or uploading a new CV.</p>
+          <p style={{ color: '#6B7280', fontSize: '0.9rem', margin: 0 }}>No matching jobs found. Try adjusting your preferences.</p>
         </div>
       )}
 
