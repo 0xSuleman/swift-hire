@@ -8,4 +8,5 @@ export const adminApi = {
   exportReport:   (params)           => api.get('/admin/reports/export', { params, responseType: 'blob' }),
   getAuditLogs:      ()              => api.get('/admin/audit-logs'),
   deleteAuditLog:    (id)           => api.delete(`/admin/audit-logs/${id}`),
+  deleteUser:        (userId)       => api.delete(`/admin/users/${userId}`),
 }

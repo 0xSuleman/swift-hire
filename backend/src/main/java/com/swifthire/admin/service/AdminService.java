@@ -7,13 +7,18 @@ import com.swifthire.admin.model.GraphicalReport;
 import com.swifthire.admin.repository.AuditLogRepository;
 import com.swifthire.admin.repository.GraphicalReportRepository;
 import com.swifthire.common.exception.ResourceNotFoundException;
+import com.swifthire.auth.repository.PasswordResetTokenRepository;
 import com.swifthire.job.model.JobPosting;
 import com.swifthire.job.repository.JobPostingRepository;
+import com.swifthire.job.repository.MatchScoreRepository;
 import com.swifthire.review.repository.ReviewRepository;
 import com.swifthire.scheduling.repository.InterviewSlotRepository;
+import com.swifthire.scheduling.repository.InterviewWindowRepository;
 import com.swifthire.user.model.AccountStatus;
 import com.swifthire.user.model.Role;
 import com.swifthire.user.model.User;
+import com.swifthire.user.repository.CandidateRepository;
+import com.swifthire.user.repository.EmployerRepository;
 import com.swifthire.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,9 +33,14 @@ import java.util.Map;
 public class AdminService {
 
     private final UserRepository userRepository;
+    private final CandidateRepository candidateRepository;
+    private final EmployerRepository employerRepository;
     private final JobPostingRepository jobPostingRepository;
+    private final MatchScoreRepository matchScoreRepository;
     private final ReviewRepository reviewRepository;
     private final InterviewSlotRepository slotRepository;
+    private final InterviewWindowRepository windowRepository;
+    private final PasswordResetTokenRepository resetTokenRepository;
     private final GraphicalReportRepository graphicalReportRepository;
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
@@ -107,12 +117,57 @@ public class AdminService {
         userRepository.save(user);
 
         // NFR 3.8.5 — audit log
+        String logAction = action.equalsIgnoreCase("delete") ? "DEACTIVATE" : action.toUpperCase();
         auditLogRepository.save(AuditLog.builder()
                 .adminEmail(adminEmail)
-                .action(action.toUpperCase())
+                .action(logAction)
                 .targetUserId(userId)
                 .targetEmail(user.getEmail())
                 .build());
+    }
+
+    @Transactional
+    public void deleteUser(Long userId, String adminEmail) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        // Delete all reviews this user gave or received
+        reviewRepository.deleteAll(reviewRepository.findByRater(user));
+        reviewRepository.deleteAll(reviewRepository.findByRatee(user));
+
+        if (user.getRole() == Role.CANDIDATE) {
+            var candidate = candidateRepository.findByUserId(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Candidate profile not found."));
+            slotRepository.deleteAll(slotRepository.findByCandidate(candidate));
+            matchScoreRepository.deleteByCandidate(candidate);
+            resetTokenRepository.deleteByUserId(userId);
+            auditLogRepository.deleteAll(auditLogRepository.findByTargetUserId(userId));
+            candidateRepository.delete(candidate);
+
+        } else if (user.getRole() == Role.EMPLOYER) {
+            var employer = employerRepository.findByUserId(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employer profile not found."));
+            List<JobPosting> jobs = jobPostingRepository.findByEmployer(employer);
+            for (JobPosting job : jobs) {
+                slotRepository.deleteAll(slotRepository.findByJobPostingId(job.getId()));
+                matchScoreRepository.deleteByJobPostingId(job.getId());
+            }
+            jobPostingRepository.deleteAll(jobs);
+            windowRepository.deleteAll(windowRepository.findByEmployer(employer));
+            resetTokenRepository.deleteByUserId(userId);
+            auditLogRepository.deleteAll(auditLogRepository.findByTargetUserId(userId));
+            employerRepository.delete(employer);
+        }
+
+        // Audit the permanent deletion
+        auditLogRepository.save(AuditLog.builder()
+                .adminEmail(adminEmail)
+                .action("DELETE")
+                .targetUserId(userId)
+                .targetEmail(user.getEmail())
+                .build());
+
+        userRepository.delete(user);
     }
 
     public void deleteAuditLog(Long id) {

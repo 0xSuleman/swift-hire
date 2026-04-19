@@ -10,6 +10,7 @@ import java.util.Optional;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByRatee(User ratee);
+    List<Review> findByRater(User rater);
     Optional<Review> findByRaterIdAndInterviewSlotId(Long raterId, Long slotId);
 
     @Query("SELECT AVG(r.ratingValue) FROM Review r WHERE r.ratee.id = :userId")

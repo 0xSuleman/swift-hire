@@ -10,4 +10,5 @@ public interface MatchScoreRepository extends JpaRepository<MatchScore, Long> {
     List<MatchScore> findByJobPostingIdOrderByRankingAsc(Long jobPostingId);
     List<MatchScore> findByCandidateOrderByMatchPercentageDesc(Candidate candidate);
     void deleteByJobPostingId(Long jobPostingId);
+    void deleteByCandidate(Candidate candidate);
 }

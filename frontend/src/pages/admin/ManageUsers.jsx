@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { adminApi } from '../../api/adminApi'
 import AppLayout from '../../components/common/AppLayout'
-import { Search, Star, ShieldCheck, ShieldOff, Trash2, Loader2, AlertCircle, CheckCircle2, Filter, ClipboardList, X } from 'lucide-react'
+import { Search, Star, ShieldCheck, ShieldOff, Trash2, Loader2, AlertCircle, CheckCircle2, Filter, ClipboardList, X, UserX } from 'lucide-react'
 
 const ROLE_COLOR   = { CANDIDATE: '#2EE5B0', EMPLOYER: '#818CF8', ADMIN: '#F59E0B' }
 const STATUS_COLOR = { ACTIVE: '#2EE5B0', BANNED: '#EF4444', DEACTIVATED: '#6B7280' }
@@ -13,6 +13,7 @@ export default function ManageUsers() {
   const [loading, setLoading] = useState(false)
   const [auditLogs, setAuditLogs] = useState([])
   const [logsLoading, setLogsLoading] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
 
   const notify = (msg, type = 'ok') => {
     setToast({ msg, type })
@@ -56,6 +57,19 @@ export default function ManageUsers() {
       // non-critical — silently ignore
     } finally {
       setLogsLoading(false)
+    }
+  }
+
+  const deleteUser = async (userId) => {
+    try {
+      await adminApi.deleteUser(userId)
+      setUsers(prev => prev.filter(u => u.id !== userId))
+      setConfirmDeleteId(null)
+      notify('User permanently deleted.')
+      loadAuditLogs()
+    } catch (err) {
+      setConfirmDeleteId(null)
+      notify(err.response?.data?.message || 'Failed to delete user.', 'err')
     }
   }
 
@@ -171,7 +185,7 @@ export default function ManageUsers() {
               </div>
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
                 <button title="Approve" onClick={() => updateStatus(u.id, 'approve')}
                   style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(46,229,176,0.08)', border: '1px solid rgba(46,229,176,0.15)', color: '#2EE5B0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(46,229,176,0.15)'}
@@ -190,6 +204,27 @@ export default function ManageUsers() {
                   onMouseLeave={e => e.currentTarget.style.background = 'rgba(107,114,128,0.08)'}>
                   <Trash2 size={13} />
                 </button>
+
+                {confirmDeleteId === u.id ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#FCA5A5', whiteSpace: 'nowrap' }}>Permanently delete?</span>
+                    <button onClick={() => deleteUser(u.id)}
+                      style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+                      Yes
+                    </button>
+                    <button onClick={() => setConfirmDeleteId(null)}
+                      style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(107,114,128,0.1)', border: '1px solid rgba(107,114,128,0.2)', color: '#9CA3AF', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button title="Delete user permanently" onClick={() => setConfirmDeleteId(u.id)}
+                    style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.14)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.06)'}>
+                    <UserX size={13} />
+                  </button>
+                )}
               </div>
             </div>
           ))}

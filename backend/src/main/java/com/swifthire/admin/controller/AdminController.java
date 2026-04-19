@@ -52,6 +52,15 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getAuditLogs()));
     }
 
+    // UC-13: Permanently delete a user and all their data
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(
+            @PathVariable Long userId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        adminService.deleteUser(userId, userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok("User permanently deleted.", null));
+    }
+
     // NFR 3.8.5: Delete a single audit log entry
     @DeleteMapping("/audit-logs/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteAuditLog(@PathVariable Long id) {
