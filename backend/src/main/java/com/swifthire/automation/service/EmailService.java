@@ -147,10 +147,29 @@ public class EmailService {
             """.formatted(rows);
     }
 
-    // UC-04: Interview invitation email
+    // UC-04: Synchronous invitation — returns true if sent, false on failure (used by batch scheduler)
+    public boolean trySendInvitation(String toEmail, String name,
+                                     LocalDateTime start, LocalDateTime end,
+                                     String calendlyLink) {
+        try {
+            buildAndSendInvitation(toEmail, name, start, end, calendlyLink);
+            return true;
+        } catch (Exception e) {
+            log.error("Invitation email failed for {}: {}", toEmail, e.getMessage());
+            return false;
+        }
+    }
+
+    // UC-04: Interview invitation email (async — kept for ad-hoc/future use)
     @Async
     @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000))
     public void sendInterviewInvitation(String toEmail, String name,
+                                        LocalDateTime start, LocalDateTime end,
+                                        String calendlyLink) {
+        buildAndSendInvitation(toEmail, name, start, end, calendlyLink);
+    }
+
+    private void buildAndSendInvitation(String toEmail, String name,
                                         LocalDateTime start, LocalDateTime end,
                                         String calendlyLink) {
         String subject = "Swift Hire — Your Interview is Scheduled";
