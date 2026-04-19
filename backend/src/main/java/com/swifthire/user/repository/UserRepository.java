@@ -15,6 +15,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByVerificationToken(String verificationToken);
     List<User> findByRole(Role role);
     List<User> findByAccountStatus(AccountStatus status);
+    List<User> findByRoleAndAccountStatus(Role role, AccountStatus status);
 
     @Query("SELECT u FROM User u WHERE u.averageRating <= :maxRating AND u.role = :role")
     List<User> findByMaxRatingAndRole(double maxRating, Role role);

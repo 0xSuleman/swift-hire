@@ -36,14 +36,22 @@ public class AdminService {
     private final ObjectMapper objectMapper;
 
     public List<Map<String, Object>> getUsers(String role, Double maxRating, String status) {
-        List<User> users;
+        Role roleEnum   = role   != null ? Role.valueOf(role.toUpperCase())                 : null;
+        AccountStatus statusEnum = status != null ? AccountStatus.valueOf(status.toUpperCase()) : null;
 
-        if (maxRating != null && role != null) {
-            users = userRepository.findByMaxRatingAndRole(maxRating, Role.valueOf(role.toUpperCase()));
-        } else if (role != null) {
-            users = userRepository.findByRole(Role.valueOf(role.toUpperCase()));
-        } else if (status != null) {
-            users = userRepository.findByAccountStatus(AccountStatus.valueOf(status.toUpperCase()));
+        List<User> users;
+        if (roleEnum != null && statusEnum != null) {
+            users = userRepository.findByRoleAndAccountStatus(roleEnum, statusEnum);
+            if (maxRating != null) {
+                final double cap = maxRating;
+                users = users.stream().filter(u -> u.getAverageRating() <= cap).toList();
+            }
+        } else if (maxRating != null && roleEnum != null) {
+            users = userRepository.findByMaxRatingAndRole(maxRating, roleEnum);
+        } else if (roleEnum != null) {
+            users = userRepository.findByRole(roleEnum);
+        } else if (statusEnum != null) {
+            users = userRepository.findByAccountStatus(statusEnum);
         } else {
             users = userRepository.findAll();
         }
