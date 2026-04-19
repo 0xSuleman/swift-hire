@@ -1,8 +1,9 @@
 package com.swifthire.candidate.service;
 
 import com.swifthire.common.exception.ResourceNotFoundException;
-import com.swifthire.job.model.MatchScore;
-import com.swifthire.job.repository.MatchScoreRepository;
+import com.swifthire.job.model.JobPosting;
+import com.swifthire.job.repository.JobPostingRepository;
+import com.swifthire.job.service.AtsScoreService;
 import com.swifthire.user.model.Candidate;
 import com.swifthire.user.repository.CandidateRepository;
 import com.swifthire.user.repository.UserRepository;
@@ -25,7 +26,8 @@ public class CandidateService {
     private final CandidateRepository candidateRepository;
     private final UserRepository userRepository;
     private final CvParserService cvParserService;
-    private final MatchScoreRepository matchScoreRepository;
+    private final JobPostingRepository jobPostingRepository;
+    private final AtsScoreService atsScoreService;
 
     @Value("${app.cv.upload-dir}")
     private String uploadDir;
@@ -114,6 +116,7 @@ public class CandidateService {
     }
 
     // UC-11: Returns ranked job postings for this candidate
+    // Scores this candidate against ALL open jobs on the fly — no employer action required.
     public List<Map<String, Object>> getRecommendedJobs(String email) {
         var user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
@@ -124,24 +127,32 @@ public class CandidateService {
             throw new IllegalArgumentException("Please complete your profile first.");
         }
 
-        return matchScoreRepository
-                .findByCandidateOrderByMatchPercentageDesc(candidate)
+        record ScoredJob(JobPosting job, double score) {}
+
+        List<ScoredJob> scored = jobPostingRepository.findByStatus(JobPosting.JobStatus.OPEN)
                 .stream()
-                .map(ms -> {
-                    var job = ms.getJobPosting();
-                    var emp = job.getEmployer();
-                    Map<String, Object> entry = new LinkedHashMap<>();
-                    entry.put("jobId",           job.getId());
-                    entry.put("jobTitle",         job.getJobTitle());
-                    entry.put("location",         job.getLocation());
-                    entry.put("shift",            job.getShift());
-                    entry.put("experienceYears",  job.getExperienceYears());
-                    entry.put("companyName",      emp.getCompanyName());
-                    entry.put("companyLocation",  emp.getCompanyLocation());
-                    entry.put("matchScore",       ms.getMatchPercentage());
-                    entry.put("ranking",          ms.getRanking());
-                    return entry;
-                })
+                .map(job -> new ScoredJob(job, atsScoreService.computeScore(candidate, job)))
+                .filter(s -> s.score() > 0)
+                .sorted(Comparator.comparingDouble(ScoredJob::score).reversed())
                 .toList();
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (int i = 0; i < scored.size(); i++) {
+            var s   = scored.get(i);
+            var job = s.job();
+            var emp = job.getEmployer();
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("jobId",          job.getId());
+            entry.put("jobTitle",       job.getJobTitle());
+            entry.put("location",       job.getLocation());
+            entry.put("shift",          job.getShift());
+            entry.put("experienceYears",job.getExperienceYears());
+            entry.put("companyName",    emp.getCompanyName());
+            entry.put("companyLocation",emp.getCompanyLocation());
+            entry.put("matchScore",     s.score());
+            entry.put("ranking",        i + 1);
+            result.add(entry);
+        }
+        return result;
     }
 }

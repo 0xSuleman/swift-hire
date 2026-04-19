@@ -56,6 +56,14 @@ public class AtsScoreService {
         return matchScoreRepository.saveAll(scores);
     }
 
+    // Candidate-side: score one candidate against one job (no persistence)
+    public double computeScore(Candidate candidate, JobPosting job) {
+        Set<String> requiredTags = parseTags(job.getRequiredSkills());
+        double pct = calculateMatch(parseTags(candidate.getParsedSkills()), requiredTags);
+        pct += preferenceBonus(candidate, job);
+        return Math.min(pct, 100.0);
+    }
+
     private double calculateMatch(Set<String> candidateTags, Set<String> requiredTags) {
         if (requiredTags.isEmpty()) return 0;
         long matched = candidateTags.stream().filter(requiredTags::contains).count();
