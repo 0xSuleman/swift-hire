@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { adminApi } from '../../api/adminApi'
 import AppLayout from '../../components/common/AppLayout'
-import { Search, Star, ShieldCheck, ShieldOff, Trash2, Loader2, AlertCircle, CheckCircle2, Filter, ClipboardList } from 'lucide-react'
+import { Search, Star, ShieldCheck, ShieldOff, Trash2, Loader2, AlertCircle, CheckCircle2, Filter, ClipboardList, X } from 'lucide-react'
 
 const ROLE_COLOR   = { CANDIDATE: '#2EE5B0', EMPLOYER: '#818CF8', ADMIN: '#F59E0B' }
 const STATUS_COLOR = { ACTIVE: '#2EE5B0', BANNED: '#EF4444', DEACTIVATED: '#6B7280' }
@@ -56,6 +56,15 @@ export default function ManageUsers() {
       // non-critical — silently ignore
     } finally {
       setLogsLoading(false)
+    }
+  }
+
+  const deleteAuditLog = async (id) => {
+    try {
+      await adminApi.deleteAuditLog(id)
+      setAuditLogs(logs => logs.filter(l => l.id !== id))
+    } catch {
+      notify('Failed to delete log entry.', 'err')
     }
   }
 
@@ -209,7 +218,7 @@ export default function ManageUsers() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['Time', 'Admin', 'Action', 'Target ID', 'Target Email'].map(h => (
+                  {['Time', 'Admin', 'Action', 'Target ID', 'Target Email', ''].map(h => (
                     <th key={h} style={{ padding: '10px 16px', textAlign: 'left', color: '#4B5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -230,6 +239,17 @@ export default function ManageUsers() {
                       </td>
                       <td style={{ padding: '9px 16px', color: '#6B7280' }}>{log.targetUserId}</td>
                       <td style={{ padding: '9px 16px', color: '#9CA3AF' }}>{log.targetEmail}</td>
+                      <td style={{ padding: '9px 16px' }}>
+                        <button
+                          onClick={() => deleteAuditLog(log.id)}
+                          title="Delete entry"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4B5563', display: 'flex', padding: 4, borderRadius: 6, transition: 'color 0.18s, background 0.18s' }}
+                          onMouseEnter={e => { e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.08)' }}
+                          onMouseLeave={e => { e.currentTarget.style.color = '#4B5563'; e.currentTarget.style.background = 'none' }}
+                        >
+                          <X size={13} />
+                        </button>
+                      </td>
                     </tr>
                   )
                 })}

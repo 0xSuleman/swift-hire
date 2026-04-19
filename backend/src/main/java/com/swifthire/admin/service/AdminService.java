@@ -115,6 +115,13 @@ public class AdminService {
                 .build());
     }
 
+    public void deleteAuditLog(Long id) {
+        if (!auditLogRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Audit log entry not found.");
+        }
+        auditLogRepository.deleteById(id);
+    }
+
     // NFR 3.8.5 — retrieve audit log for admin dashboard
     public List<Map<String, Object>> getAuditLogs() {
         return auditLogRepository.findAllByOrderByPerformedAtDesc().stream().map(log -> {

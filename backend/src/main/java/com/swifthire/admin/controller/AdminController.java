@@ -52,6 +52,13 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getAuditLogs()));
     }
 
+    // NFR 3.8.5: Delete a single audit log entry
+    @DeleteMapping("/audit-logs/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteAuditLog(@PathVariable Long id) {
+        adminService.deleteAuditLog(id);
+        return ResponseEntity.ok(ApiResponse.ok("Audit log entry deleted.", null));
+    }
+
     // UC-14: Generate system report (ACD: generateGraphicalReport)
     @GetMapping("/reports")
     public ResponseEntity<ApiResponse<Object>> getReport(
