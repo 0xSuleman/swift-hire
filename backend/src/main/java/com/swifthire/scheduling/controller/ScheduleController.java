@@ -18,6 +18,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,12 +54,20 @@ public class ScheduleController {
         Employer employer = employerRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Employer not found."));
 
+        LocalDate date      = LocalDate.parse(body.get("date").toString());
+        LocalTime startTime = LocalTime.parse(body.get("startTime").toString());
+        LocalTime endTime   = LocalTime.parse(body.get("endTime").toString());
+
+        if (LocalDateTime.of(date, startTime).isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Interview window cannot be scheduled in the past.");
+        }
+
         // Persist the window first — fixes TransientPropertyValueException (Bug #2)
         InterviewWindow window = InterviewWindow.builder()
                 .employer(employer)
-                .date(LocalDate.parse(body.get("date").toString()))
-                .startTime(LocalTime.parse(body.get("startTime").toString()))
-                .endTime(LocalTime.parse(body.get("endTime").toString()))
+                .date(date)
+                .startTime(startTime)
+                .endTime(endTime)
                 .build();
         windowRepository.save(window);
 
