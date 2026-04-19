@@ -102,6 +102,8 @@ public class CandidateService {
 
         Map<String, Object> profile = new LinkedHashMap<>();
         profile.put("name",              user.getName());
+        profile.put("email",             user.getEmail());
+        profile.put("phoneNo",           user.getPhoneNo());
         profile.put("averageRating",     user.getAverageRating());
         profile.put("totalRatings",      user.getTotalRatings());
         profile.put("parsedSkills",      candidate.getParsedSkills());
@@ -126,13 +128,18 @@ public class CandidateService {
                 .findByCandidateOrderByMatchPercentageDesc(candidate)
                 .stream()
                 .map(ms -> {
+                    var job = ms.getJobPosting();
+                    var emp = job.getEmployer();
                     Map<String, Object> entry = new LinkedHashMap<>();
-                    entry.put("jobId",        ms.getJobPosting().getId());
-                    entry.put("jobTitle",     ms.getJobPosting().getJobTitle());
-                    entry.put("location",     ms.getJobPosting().getLocation());
-                    entry.put("shift",        ms.getJobPosting().getShift());
-                    entry.put("matchScore",   ms.getMatchPercentage());
-                    entry.put("ranking",      ms.getRanking());
+                    entry.put("jobId",           job.getId());
+                    entry.put("jobTitle",         job.getJobTitle());
+                    entry.put("location",         job.getLocation());
+                    entry.put("shift",            job.getShift());
+                    entry.put("experienceYears",  job.getExperienceYears());
+                    entry.put("companyName",      emp.getCompanyName());
+                    entry.put("companyLocation",  emp.getCompanyLocation());
+                    entry.put("matchScore",       ms.getMatchPercentage());
+                    entry.put("ranking",          ms.getRanking());
                     return entry;
                 })
                 .toList();

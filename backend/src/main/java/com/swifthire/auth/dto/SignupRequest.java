@@ -22,6 +22,10 @@ public class SignupRequest {
     )
     private String password;
 
+    @Pattern(
+        regexp = "^\\+?[0-9\\s\\-]{7,15}$",
+        message = "Enter a valid phone number (e.g. +92 300 1234567)."
+    )
     private String phoneNo;
 
     @NotNull(message = "Role is required.")

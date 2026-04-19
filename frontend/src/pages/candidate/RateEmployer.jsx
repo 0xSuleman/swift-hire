@@ -1,19 +1,26 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { candidateApi } from '../../api/candidateApi'
 import AppLayout from '../../components/common/AppLayout'
-import { Star, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react'
+import { Star, AlertCircle, Loader2, CheckCircle2, Building2, Briefcase } from 'lucide-react'
 
 const LABELS = { 1: 'Poor', 2: 'Fair', 3: 'Good', 4: 'Very Good', 5: 'Excellent' }
 
 export default function RateEmployer() {
   const { slotId } = useParams()
   const navigate   = useNavigate()
+  const [slot, setSlot]       = useState(null)
   const [rating, setRating]   = useState(0)
   const [hovered, setHovered] = useState(0)
   const [comment, setComment] = useState('')
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    candidateApi.getSlot(slotId)
+      .then(res => setSlot(res.data.data))
+      .catch(() => {})
+  }, [slotId])
 
   const handleSubmit = async e => {
     e.preventDefault()
@@ -38,6 +45,22 @@ export default function RateEmployer() {
           <h1 className="page-title">Rate Employer</h1>
           <p className="page-subtitle">Share your interview experience to help other candidates.</p>
         </div>
+
+        {slot && (
+          <div className="app-card" style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Building2 size={14} style={{ color: '#2EE5B0' }} />
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#E8EAF0' }}>{slot.employer}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Briefcase size={13} style={{ color: '#6B7280' }} />
+              <span style={{ fontSize: '0.8rem', color: '#6B7280' }}>{slot.jobTitle}</span>
+            </div>
+            {slot.companyLocation && (
+              <span style={{ fontSize: '0.75rem', color: '#4B5563' }}>{slot.companyLocation}</span>
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="app-card" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

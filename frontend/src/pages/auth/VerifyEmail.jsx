@@ -9,6 +9,9 @@ export default function VerifyEmail() {
   const navigate = useNavigate()
   const [status, setStatus] = useState('verifying') // verifying | success | error
   const [message, setMessage] = useState('')
+  const [resendEmail, setResendEmail] = useState('')
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendMsg, setResendMsg] = useState('')
 
   useEffect(() => {
     const token = searchParams.get('token')
@@ -53,7 +56,35 @@ export default function VerifyEmail() {
           <>
             <div style={{ fontSize: '3rem' }}>❌</div>
             <p style={{ color: '#F87171', fontSize: '0.9rem', lineHeight: 1.6 }}>{message}</p>
-            <button className="btn-teal" style={{ marginTop: '8px' }} onClick={() => navigate('/signup')}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+              <input
+                type="email"
+                className="auth-input"
+                placeholder="Enter your email to resend"
+                value={resendEmail}
+                onChange={e => setResendEmail(e.target.value)}
+              />
+              <button
+                className="btn-teal"
+                disabled={resendLoading || !resendEmail}
+                onClick={async () => {
+                  setResendLoading(true)
+                  setResendMsg('')
+                  try {
+                    await authApi.resendVerification(resendEmail)
+                    setResendMsg('Verification email resent! Check your inbox.')
+                  } catch {
+                    setResendMsg('Failed to resend. Check the email and try again.')
+                  } finally {
+                    setResendLoading(false)
+                  }
+                }}
+              >
+                {resendLoading ? 'Sending...' : 'Resend Verification Email'}
+              </button>
+              {resendMsg && <p style={{ color: '#2EE5B0', fontSize: '0.8rem', margin: 0 }}>{resendMsg}</p>}
+            </div>
+            <button className="btn-ghost" style={{ marginTop: '4px' }} onClick={() => navigate('/signup')}>
               Sign Up Again
             </button>
           </>

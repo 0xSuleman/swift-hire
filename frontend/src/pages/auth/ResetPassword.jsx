@@ -15,6 +15,7 @@ export default function ResetPassword() {
 
   // --- Reset flow (token present) ---
   const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [done, setDone] = useState(false)
 
   const [error, setError] = useState('')
@@ -37,6 +38,7 @@ export default function ResetPassword() {
   const handleReset = async e => {
     e.preventDefault()
     setError('')
+    if (newPassword !== confirmPassword) { setError('Passwords do not match.'); return }
     setLoading(true)
     try {
       await authApi.resetPassword(token, newPassword)
@@ -83,11 +85,29 @@ export default function ResetPassword() {
                 <input
                   className="auth-input"
                   type="password"
-                  placeholder="Enter new password"
+                  placeholder="Min. 8 chars, uppercase, number, special"
                   value={newPassword}
                   required
-                  minLength={6}
+                  minLength={8}
                   onChange={e => setNewPassword(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#9CA3AF', marginBottom: '8px', letterSpacing: '0.03em' }}>
+                Confirm new password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Lock style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#4B5563' }} />
+                <input
+                  className="auth-input"
+                  type="password"
+                  placeholder="Re-enter new password"
+                  value={confirmPassword}
+                  required
+                  minLength={8}
+                  onChange={e => setConfirmPassword(e.target.value)}
                 />
               </div>
             </div>

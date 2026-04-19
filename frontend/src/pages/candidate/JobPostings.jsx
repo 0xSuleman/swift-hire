@@ -103,9 +103,14 @@ export default function JobPostings() {
 
               {/* Job info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#E8EAF0', margin: '0 0 5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#E8EAF0', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {job.jobTitle}
                 </p>
+                {job.companyName && (
+                  <p style={{ fontSize: '0.8rem', fontWeight: 500, color: '#2EE5B0', margin: '0 0 4px' }}>
+                    {job.companyName}{job.companyLocation ? ` · ${job.companyLocation}` : ''}
+                  </p>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
                   {job.location && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: '#6B7280' }}>
@@ -115,6 +120,11 @@ export default function JobPostings() {
                   {job.shift && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: '#6B7280' }}>
                       <Clock size={11} /> {job.shift}
+                    </span>
+                  )}
+                  {job.experienceYears != null && (
+                    <span style={{ fontSize: '0.78rem', color: '#6B7280' }}>
+                      {job.experienceYears}+ yrs exp
                     </span>
                   )}
                 </div>

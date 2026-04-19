@@ -82,14 +82,17 @@ public class ScheduleController {
             var candidate = candidateRepository.findByUserId(user.getId())
                     .orElseThrow(() -> new IllegalArgumentException("Candidate profile not found."));
             result = slotRepository.findByCandidate(candidate).stream().map(s -> {
+                var emp = s.getJobPosting().getEmployer();
                 Map<String, Object> m = new LinkedHashMap<>();
-                m.put("slotId",       s.getId());
-                m.put("jobTitle",     s.getJobPosting().getJobTitle());
-                m.put("employer",     s.getJobPosting().getEmployer().getCompanyName());
-                m.put("startTime",    s.getStartTime().toString());
-                m.put("endTime",      s.getEndTime().toString());
-                m.put("status",       s.getStatus().name());
-                m.put("calendlyLink", s.getCalendlyLink());
+                m.put("slotId",          s.getId());
+                m.put("jobTitle",        s.getJobPosting().getJobTitle());
+                m.put("employer",        emp.getCompanyName());
+                m.put("employerEmail",   emp.getUser().getEmail());
+                m.put("companyLocation", emp.getCompanyLocation());
+                m.put("startTime",       s.getStartTime().toString());
+                m.put("endTime",         s.getEndTime().toString());
+                m.put("status",          s.getStatus().name());
+                m.put("calendlyLink",    s.getCalendlyLink());
                 return m;
             }).toList();
         } else {
@@ -97,20 +100,48 @@ public class ScheduleController {
             var employer = employerRepository.findByUserId(user.getId())
                     .orElseThrow(() -> new IllegalArgumentException("Employer profile not found."));
             result = slotRepository.findByWindow_Employer(employer).stream().map(s -> {
+                var cUser = s.getCandidate().getUser();
                 Map<String, Object> m = new LinkedHashMap<>();
-                m.put("slotId",       s.getId());
-                m.put("jobTitle",     s.getJobPosting().getJobTitle());
-                m.put("candidate",    s.getCandidate().getUser().getName());
-                m.put("skills",       s.getCandidate().getParsedSkills());
-                m.put("startTime",    s.getStartTime().toString());
-                m.put("endTime",      s.getEndTime().toString());
-                m.put("status",       s.getStatus().name());
-                m.put("calendlyLink", s.getCalendlyLink());
+                m.put("slotId",          s.getId());
+                m.put("jobTitle",        s.getJobPosting().getJobTitle());
+                m.put("candidate",       cUser.getName());
+                m.put("candidateEmail",  cUser.getEmail());
+                m.put("candidatePhone",  cUser.getPhoneNo());
+                m.put("skills",          s.getCandidate().getParsedSkills());
+                m.put("startTime",       s.getStartTime().toString());
+                m.put("endTime",         s.getEndTime().toString());
+                m.put("status",          s.getStatus().name());
+                m.put("calendlyLink",    s.getCalendlyLink());
                 return m;
             }).toList();
         }
 
         return ResponseEntity.ok(ApiResponse.ok("Interviews fetched.", result));
+    }
+
+    // Returns summary of a single slot (used by rating pages for context)
+    @GetMapping("/slots/{slotId}")
+    public ResponseEntity<ApiResponse<Object>> getSlot(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long slotId) {
+
+        InterviewSlot s = slotRepository.findById(slotId)
+                .orElseThrow(() -> new IllegalArgumentException("Slot not found."));
+
+        var emp  = s.getJobPosting().getEmployer();
+        var cUser = s.getCandidate().getUser();
+
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("slotId",          s.getId());
+        m.put("jobTitle",        s.getJobPosting().getJobTitle());
+        m.put("status",          s.getStatus().name());
+        m.put("candidate",       cUser.getName());
+        m.put("candidateEmail",  cUser.getEmail());
+        m.put("employer",        emp.getCompanyName());
+        m.put("employerEmail",   emp.getUser().getEmail());
+        m.put("companyLocation", emp.getCompanyLocation());
+
+        return ResponseEntity.ok(ApiResponse.ok("Slot fetched.", m));
     }
 
     // Update slot status — drives the PENDING→CONFIRMED→COMPLETED flow

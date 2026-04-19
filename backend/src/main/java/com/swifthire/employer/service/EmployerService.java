@@ -40,9 +40,17 @@ public class EmployerService {
         var employer = employerRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employer profile not found."));
 
-        if (updates.containsKey("companyName"))     employer.setCompanyName(updates.get("companyName"));
+        if (updates.containsKey("companyName")) {
+            String v = updates.get("companyName");
+            if (v == null || v.isBlank()) throw new IllegalArgumentException("Company name cannot be empty.");
+            employer.setCompanyName(v);
+        }
         if (updates.containsKey("companyDetails"))  employer.setCompanyDetails(updates.get("companyDetails"));
-        if (updates.containsKey("companyLocation")) employer.setCompanyLocation(updates.get("companyLocation"));
+        if (updates.containsKey("companyLocation")) {
+            String v = updates.get("companyLocation");
+            if (v == null || v.isBlank()) throw new IllegalArgumentException("Company location cannot be empty.");
+            employer.setCompanyLocation(v);
+        }
         if (updates.containsKey("name"))            user.setName(updates.get("name"));
         employerRepository.save(employer);
         userRepository.save(user);

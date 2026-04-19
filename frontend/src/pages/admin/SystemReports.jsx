@@ -37,6 +37,10 @@ export default function SystemReports() {
   const generate = async e => {
     e.preventDefault()
     setError('')
+    if (params.from && params.to && params.from > params.to) {
+      setError('"From" date must be before "To" date.')
+      return
+    }
     setReport(null)
     setLoading(true)
     try {

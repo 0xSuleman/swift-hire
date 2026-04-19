@@ -14,4 +14,5 @@ export const candidateApi = {
   getMyInterviews:  ()              => api.get('/schedule/my-interviews'),
   updateSlotStatus: (slotId, status) => api.patch(`/schedule/slots/${slotId}/status`, { status }),
   rateEmployer:     (data)          => api.post('/reviews/employer', data),
+  getSlot:          (slotId)        => api.get(`/schedule/slots/${slotId}`),
 }

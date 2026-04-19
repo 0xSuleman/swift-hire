@@ -137,7 +137,7 @@ export default function Signup() {
             <input
               className="auth-input has-right"
               type={showPassword ? 'text' : 'password'}
-              placeholder="Min. 8 characters"
+              placeholder="Min. 8 chars, A-Z, a-z, 0-9, special char"
               value={form.password}
               required
               onChange={e => setForm(f => ({ ...f, password: e.target.value }))}

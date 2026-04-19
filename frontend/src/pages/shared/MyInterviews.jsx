@@ -87,11 +87,25 @@ export default function MyInterviews() {
                   <p style={{ margin: '0 0 4px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.95rem' }}>
                     {slot.jobTitle}
                   </p>
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#6B7280' }}>
-                    {isCandidate
-                      ? `Employer: ${slot.employer ?? '—'}`
-                      : `Candidate: ${slot.candidate ?? '—'}${slot.skills ? ` · ${slot.skills}` : ''}`}
-                  </p>
+                  {isCandidate ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontSize: '0.78rem', color: '#6B7280' }}>
+                        {slot.employer ?? '—'}{slot.companyLocation ? ` · ${slot.companyLocation}` : ''}
+                      </span>
+                      {slot.employerEmail && (
+                        <span style={{ fontSize: '0.72rem', color: '#4B5563' }}>{slot.employerEmail}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontSize: '0.78rem', color: '#6B7280' }}>{slot.candidate ?? '—'}</span>
+                      {slot.candidateEmail && (
+                        <span style={{ fontSize: '0.72rem', color: '#4B5563' }}>
+                          {slot.candidateEmail}{slot.candidatePhone ? ` · ${slot.candidatePhone}` : ''}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Middle: time */}
