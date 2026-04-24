@@ -22,20 +22,42 @@ const inputStyle = {
   transition: 'border-color 0.2s',
 }
 
+
 export default function AutoSchedule() {
-  const { jobId }    = useParams()
-  const { state }    = useLocation()
-  const navigate     = useNavigate()
-  const selectedIds  = state?.selectedIds || []
+  const { jobId }   = useParams()
+  const { state }   = useLocation()
+  const navigate    = useNavigate()
+  const selectedIds = state?.selectedIds || []
 
   const [window_, setWindow] = useState({ date: '', startTime: '', endTime: '' })
   const [error, setError]    = useState('')
   const [loading, setLoading] = useState(false)
+  const [preview, setPreview] = useState(null)   // null = form, array = preview step
   const [done, setDone]       = useState(false)
   const [doneMsg, setDoneMsg] = useState('')
 
-  const handleSubmit = async e => {
+  // Step 1 → Step 2: call backend preview (real conflict + time checks, no DB writes)
+  const handleGeneratePreview = async e => {
     e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      const res = await employerApi.previewSchedule({
+        date: window_.date,
+        startTime: window_.startTime + ':00',
+        endTime: window_.endTime + ':00',
+        candidateCount: selectedIds.length,
+      })
+      setPreview(res.data.data)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not generate preview.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Step 2 → Step 3: confirm → call backend
+  const handleConfirm = async () => {
     setError('')
     setLoading(true)
     try {
@@ -50,12 +72,13 @@ export default function AutoSchedule() {
       setDone(true)
     } catch (err) {
       setError(err.response?.data?.message || 'Scheduling failed.')
+      setPreview(null)
     } finally {
       setLoading(false)
     }
   }
 
-  // ── Done state ─────────────────────────────────────────────────
+  // ── Step 3: Done ────────────────────────────────────────────────
   const emailsFailed = doneMsg.includes('could not be sent')
   if (done) return (
     <AppLayout>
@@ -78,12 +101,69 @@ export default function AutoSchedule() {
           </p>
         </div>
         <button onClick={() => navigate('/employer')} className="btn-teal" style={{ width: 'auto', padding: '10px 28px', marginTop: 8 }}>
-          Back to Dashboard
+          Finish
         </button>
       </div>
     </AppLayout>
   )
 
+  // ── Step 2: Schedule Summary ────────────────────────────────────
+  if (preview) return (
+    <AppLayout>
+      <div style={{ maxWidth: 520 }}>
+        <button onClick={() => { setPreview(null); setError('') }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#6B7280', fontSize: '0.82rem', cursor: 'pointer', marginBottom: 20, padding: 0 }}
+          onMouseEnter={e => e.currentTarget.style.color = '#9CA3AF'}
+          onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}>
+          <ArrowLeft size={14} /> Back
+        </button>
+
+        <div className="page-header">
+          <h1 className="page-title">Schedule Summary</h1>
+          <p className="page-subtitle">Review the proposed slots, then confirm to create the schedule and send invitations.</p>
+        </div>
+
+        <div className="app-card" style={{ marginBottom: 16, padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Calendar size={13} style={{ color: '#2EE5B0' }} />
+            <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>
+              {new Date(window_.date + 'T00:00:00').toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </span>
+          </div>
+          {preview.map((slot, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '12px 20px',
+              borderBottom: i < preview.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+            }}>
+              <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>Slot {slot.slotNumber}</span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#E8EAF0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Clock size={12} style={{ color: '#4B5563' }} />
+                {slot.startTime} – {slot.endTime}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {error && (
+          <div className="error-banner" style={{ marginBottom: 12 }}>
+            <AlertCircle size={15} style={{ flexShrink: 0 }} /> {error}
+          </div>
+        )}
+
+        <button onClick={handleConfirm} className="btn-teal" disabled={loading} style={{ width: '100%' }}>
+          {loading
+            ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Creating schedule...
+              </span>
+            : 'Confirm & Send Invitations'
+          }
+        </button>
+      </div>
+    </AppLayout>
+  )
+
+  // ── Step 1: Form ────────────────────────────────────────────────
   return (
     <AppLayout>
       <div style={{ maxWidth: 520 }}>
@@ -103,7 +183,6 @@ export default function AutoSchedule() {
           </p>
         </div>
 
-        {/* Info pill */}
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 9999, background: 'rgba(46,229,176,0.06)', border: '1px solid rgba(46,229,176,0.15)', marginBottom: 24 }}>
           <Users size={13} style={{ color: '#2EE5B0' }} />
           <span style={{ fontSize: '0.78rem', color: '#2EE5B0', fontWeight: 500 }}>
@@ -111,7 +190,7 @@ export default function AutoSchedule() {
           </span>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleGeneratePreview}>
           <div className="app-card" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
             <Field label="Date">
@@ -151,7 +230,7 @@ export default function AutoSchedule() {
             <button type="submit" className="btn-teal" disabled={loading}>
               {loading
                 ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Generating...
+                    <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Checking...
                   </span>
                 : 'Generate Schedule'
               }

@@ -38,7 +38,7 @@ public class PromptEngineService {
         Set<String> shifts    = matchCategory(lower, KnownSkillsDictionary.SkillCategory.SHIFT);
         Integer experience    = extractExperience(lower);
 
-        if (skills.isEmpty() && locations.isEmpty() && shifts.isEmpty()) {
+        if (skills.isEmpty()) {
             throw new IllegalArgumentException(
                 "Could not identify skills/requirements. Please rewrite the prompt.");
         }

@@ -35,7 +35,7 @@ public class AtsScoreService {
                 .filter(c -> c.getParsedSkills() != null && !c.getParsedSkills().isBlank())
                 .map(candidate -> {
                     double pct = calculateMatch(parseTags(candidate.getParsedSkills()), requiredTags);
-                    pct += preferenceBonus(candidate, jobPosting);
+                    if (pct > 0) pct += preferenceBonus(candidate, jobPosting);
                     return MatchScore.builder()
                             .candidate(candidate)
                             .jobPosting(jobPosting)

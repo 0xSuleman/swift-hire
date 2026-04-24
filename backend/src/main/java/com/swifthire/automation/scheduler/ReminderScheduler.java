@@ -30,6 +30,21 @@ public class ReminderScheduler {
     private final EmailService emailService;
     private final NotificationLogRepository notificationLogRepository;
 
+    // Auto-completes interviews whose end time has passed and are still PENDING or CONFIRMED
+    @Scheduled(cron = "0 * * * * *")
+    @Transactional
+    public void autoCompleteExpiredInterviews() {
+        LocalDateTime now = LocalDateTime.now();
+        List<InterviewSlot> expired = slotRepository.findByEndTimeBeforeAndStatusIn(
+                now, List.of(InterviewSlot.SlotStatus.PENDING, InterviewSlot.SlotStatus.CONFIRMED));
+        for (InterviewSlot slot : expired) {
+            slot.setStatus(InterviewSlot.SlotStatus.COMPLETED);
+            slotRepository.save(slot);
+            log.info("Auto-completed slot id={} for candidate={}",
+                    slot.getId(), slot.getCandidate().getUser().getEmail());
+        }
+    }
+
     // Runs every hour on the hour
     @Scheduled(cron = "0 0 * * * *")
     @Transactional

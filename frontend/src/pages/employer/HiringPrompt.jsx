@@ -19,11 +19,19 @@ export default function HiringPrompt() {
   const handleSubmit = async e => {
     e.preventDefault()
     setError('')
+    if (!prompt.trim()) {
+      setError('Prompt cannot be empty.')
+      return
+    }
     setLoading(true)
     try {
       const res = await employerApi.submitPrompt(prompt)
-      const { jobPostingId } = res.data.data
-      navigate(`/employer/candidates/${jobPostingId}`)
+      const { jobPostingId, candidatesFound } = res.data.data
+      if (candidatesFound === 0) {
+        setError('No matching candidates found. Try changing skills/experience/location.')
+      } else {
+        navigate(`/employer/candidates/${jobPostingId}`)
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to process prompt.')
     } finally {
@@ -48,7 +56,6 @@ export default function HiringPrompt() {
               value={prompt}
               onChange={e => { setPrompt(e.target.value); setError('') }}
               placeholder="e.g. Need a Java dev with 3 years exp, Spring Boot, night shift in Lahore"
-              required
               style={{
                 width: '100%', background: 'transparent', border: 'none', outline: 'none',
                 color: '#E8EAF0', fontSize: '0.95rem', lineHeight: 1.7, resize: 'none',
@@ -63,14 +70,14 @@ export default function HiringPrompt() {
               </span>
               <button
                 type="submit"
-                disabled={loading || prompt.trim().length === 0}
+                disabled={loading}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8,
                   padding: '9px 22px', borderRadius: 9999,
                   background: 'linear-gradient(135deg, #2ee5b0, #00c9a7)',
                   color: '#052015', fontWeight: 600, fontSize: '0.88rem',
-                  border: 'none', cursor: loading || prompt.trim().length === 0 ? 'not-allowed' : 'pointer',
-                  opacity: loading || prompt.trim().length === 0 ? 0.5 : 1,
+                  border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.5 : 1,
                   transition: 'filter 0.2s, box-shadow 0.2s',
                   boxShadow: '0 0 16px rgba(46,229,176,0.2)',
                 }}

@@ -127,6 +127,18 @@ export default function JobPostings() {
                     </span>
                   )}
                 </div>
+                {job.requiredSkills && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
+                    {job.requiredSkills.split(',').map(s => s.trim()).filter(Boolean).map((skill, idx) => (
+                      <span key={idx} style={{
+                        padding: '2px 8px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 500,
+                        background: 'rgba(46,229,176,0.06)', border: '1px solid rgba(46,229,176,0.15)', color: '#4B9E8A',
+                      }}>
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Match score */}
