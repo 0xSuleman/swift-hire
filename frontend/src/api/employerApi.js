@@ -6,6 +6,7 @@ export const employerApi = {
   submitPrompt:         (prompt)         => api.post('/jobs/prompt', { prompt }),
   getCandidates:        (jobId)          => api.get(`/jobs/${jobId}/candidates`),
   getMyJobs:            ()               => api.get('/jobs'),
+  previewSchedule:      (data)           => api.post('/schedule/preview', data),
   scheduleBatch:        (data)           => api.post('/schedule/batch', data),
   rateCandidate:        (data)           => api.post('/reviews/candidate', data),
   getAnalytics:         ()               => api.get('/analytics/employer'),

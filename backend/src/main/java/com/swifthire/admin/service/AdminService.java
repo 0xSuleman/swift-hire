@@ -66,7 +66,7 @@ public class AdminService {
             users = userRepository.findAll();
         }
 
-        return users.stream().map(u -> {
+        return users.stream().filter(User::isEmailVerified).map(u -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id",            u.getId());
             m.put("name",          u.getName());

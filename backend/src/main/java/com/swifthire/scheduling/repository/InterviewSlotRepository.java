@@ -17,6 +17,12 @@ public interface InterviewSlotRepository extends JpaRepository<InterviewSlot, Lo
            "AND s.startTime < :end AND s.endTime > :start")
     List<InterviewSlot> findOverlappingSlots(Long windowId, LocalDateTime start, LocalDateTime end);
 
+    // Employer-wide conflict detection: overlapping slots across all their job postings
+    @Query("SELECT s FROM InterviewSlot s WHERE s.window.employer.id = :employerId " +
+           "AND s.startTime < :end AND s.endTime > :start " +
+           "AND s.status <> 'CANCELLED'")
+    List<InterviewSlot> findOverlappingSlotsByEmployer(Long employerId, LocalDateTime start, LocalDateTime end);
+
     // For cron reminder job (UC-15): find slots where interview is approaching
     @Query("SELECT s FROM InterviewSlot s WHERE s.startTime BETWEEN :from AND :to " +
            "AND s.status IN ('PENDING', 'CONFIRMED')")
@@ -24,4 +30,7 @@ public interface InterviewSlotRepository extends JpaRepository<InterviewSlot, Lo
 
     List<InterviewSlot> findByJobPostingId(Long jobPostingId);
     List<InterviewSlot> findByWindow_Employer(com.swifthire.user.model.Employer employer);
+
+    // Auto-completion cron: find slots whose end time has passed, still in active status
+    List<InterviewSlot> findByEndTimeBeforeAndStatusIn(LocalDateTime endTime, List<InterviewSlot.SlotStatus> statuses);
 }

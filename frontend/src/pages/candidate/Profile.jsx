@@ -54,7 +54,8 @@ export default function Profile() {
     setTimeout(() => setToast({ msg: '', type: 'ok' }), 4000)
   }
 
-  useEffect(() => {
+  const loadProfile = () => {
+    setFetchError(false)
     candidateApi.getProfile()
       .then(res => {
         setProfile(res.data.data)
@@ -65,7 +66,9 @@ export default function Profile() {
         })
       })
       .catch(() => { notify('Failed to load profile.', 'err'); setFetchError(true) })
-  }, [])
+  }
+
+  useEffect(() => { loadProfile() }, [])
 
   const uploadCv = async e => {
     e.preventDefault()
@@ -114,8 +117,12 @@ export default function Profile() {
 
   if (fetchError) return (
     <AppLayout>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#4B5563', gap: 12 }}>
-        <p style={{ color: '#FCA5A5', fontSize: '0.9rem' }}>Failed to load profile. Please log out and log back in.</p>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#4B5563', gap: 16 }}>
+        <p style={{ color: '#FCA5A5', fontSize: '0.9rem', margin: 0 }}>Failed to load profile.</p>
+        <button onClick={loadProfile}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)', background: 'none', color: '#9CA3AF', fontSize: '0.82rem', cursor: 'pointer' }}>
+          Try Again
+        </button>
       </div>
     </AppLayout>
   )

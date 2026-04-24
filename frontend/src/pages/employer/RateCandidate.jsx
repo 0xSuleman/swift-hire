@@ -31,7 +31,7 @@ export default function RateCandidate() {
     try {
       await employerApi.rateCandidate({ slotId: Number(slotId), rating, comment })
       setSuccess(true)
-      setTimeout(() => navigate('/employer'), 1800)
+      setTimeout(() => navigate('/employer/interviews'), 1800)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit rating.')
     } finally {

@@ -144,6 +144,7 @@ public class CandidateService {
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("jobId",          job.getId());
             entry.put("jobTitle",       job.getJobTitle());
+            entry.put("requiredSkills", job.getRequiredSkills());
             entry.put("location",       job.getLocation());
             entry.put("shift",          job.getShift());
             entry.put("experienceYears",job.getExperienceYears());
