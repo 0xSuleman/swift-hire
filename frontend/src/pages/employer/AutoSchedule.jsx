@@ -79,24 +79,26 @@ export default function AutoSchedule() {
   }
 
   // ── Step 3: Done ────────────────────────────────────────────────
-  const emailsFailed = doneMsg.includes('could not be sent')
+  const emailsFailed  = doneMsg.includes('could not be sent')
+  const alreadyBooked = doneMsg.includes('already scheduled')
+  const accentColor   = alreadyBooked ? '#818CF8' : emailsFailed ? '#F59E0B' : '#2EE5B0'
   if (done) return (
     <AppLayout>
       <div style={{ maxWidth: 480, margin: '60px auto', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16 }}>
         <div style={{
           width: 64, height: 64, borderRadius: '50%',
-          background: emailsFailed ? 'rgba(245,158,11,0.1)' : 'rgba(46,229,176,0.1)',
-          border: `1px solid ${emailsFailed ? 'rgba(245,158,11,0.3)' : 'rgba(46,229,176,0.25)'}`,
+          background: `${accentColor}1A`,
+          border: `1px solid ${accentColor}4D`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: `0 0 32px ${emailsFailed ? 'rgba(245,158,11,0.15)' : 'rgba(46,229,176,0.15)'}`,
+          boxShadow: `0 0 32px ${accentColor}26`,
         }}>
-          <CheckCircle2 size={28} style={{ color: emailsFailed ? '#F59E0B' : '#2EE5B0' }} />
+          <CheckCircle2 size={28} style={{ color: accentColor }} />
         </div>
         <div>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#E8EAF0', margin: '0 0 8px' }}>
-            {emailsFailed ? 'Schedule Created' : 'Interviews Scheduled!'}
+            {alreadyBooked ? 'Interview Already Scheduled' : emailsFailed ? 'Schedule Created' : 'Interviews Scheduled!'}
           </h2>
-          <p style={{ color: emailsFailed ? '#F59E0B' : '#6B7280', fontSize: '0.875rem', margin: 0 }}>
+          <p style={{ color: accentColor === '#2EE5B0' ? '#6B7280' : accentColor, fontSize: '0.875rem', margin: 0 }}>
             {doneMsg}
           </p>
         </div>

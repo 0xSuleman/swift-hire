@@ -130,6 +130,11 @@ public class ScheduleService {
             Candidate candidate = candidateRepository.findById(candidateId)
                     .orElseThrow(() -> new IllegalArgumentException("Candidate not found: " + candidateId));
 
+            if (slotRepository.existsByCandidateAndWindow_EmployerAndStatusNot(
+                    candidate, window.getEmployer(), InterviewSlot.SlotStatus.CANCELLED)) {
+                continue;
+            }
+
             LocalDateTime slotEnd = cursor.plusMinutes(SLOT_DURATION_MINUTES);
             String link = "https://meet.jit.si/swift-hire-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 
