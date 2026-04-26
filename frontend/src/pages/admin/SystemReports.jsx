@@ -41,7 +41,7 @@ function ReportTable({ records }) {
             <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               {keys.map(k => (
                 <td key={k} style={{ padding: '9px 14px', color: '#9CA3AF', whiteSpace: 'nowrap', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {row[k] ?? '—'}
+                  {row[k] === true ? 'Yes' : row[k] === false ? 'No' : row[k] ?? '—'}
                 </td>
               ))}
             </tr>
