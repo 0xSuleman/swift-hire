@@ -109,6 +109,12 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getUserReviews(userId)));
     }
 
+    // UC-13: View activity timeline for a user (derived from existing timestamps)
+    @GetMapping("/users/{userId}/activity")
+    public ResponseEntity<ApiResponse<Object>> getUserActivity(@PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getUserActivity(userId)));
+    }
+
     // UC-14: View history of generated reports (ACD: Admin Views GraphicalReport 1:0..*)
     @GetMapping("/reports/history")
     public ResponseEntity<ApiResponse<Object>> getReportHistory() {

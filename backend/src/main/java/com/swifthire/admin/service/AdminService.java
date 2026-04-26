@@ -107,6 +107,11 @@ public class AdminService {
                 m.put("preferredLocation", c.getPreferredLocation());
                 m.put("preferredShift",    c.getPreferredShift());
                 m.put("workType",          c.getWorkType());
+                if (c.getHiredAt() != null) {
+                    m.put("hiredAt",          c.getHiredAt().toString());
+                    m.put("hiredCompanyName", c.getHiredCompanyName());
+                    m.put("hiredJobTitle",    c.getHiredJobTitle());
+                }
             });
         } else if (user.getRole() == Role.EMPLOYER) {
             employerRepository.findByUserId(userId).ifPresent(e -> {
@@ -245,11 +250,13 @@ public class AdminService {
                                 r.put("totalRatings",  u.getTotalRatings());
                                 r.put("memberSince",   u.getCreatedAt() != null ? u.getCreatedAt().toLocalDate().toString() : "");
                                 candidateRepository.findByUserId(u.getId()).ifPresent(c -> {
-                                    r.put("location",  c.getPreferredLocation());
-                                    r.put("shift",     c.getPreferredShift());
-                                    r.put("workType",  c.getWorkType());
+                                    r.put("location",     c.getPreferredLocation());
+                                    r.put("shift",        c.getPreferredShift());
+                                    r.put("workType",     c.getWorkType());
                                     r.put("profileViews", c.getProfileViews());
-                                    r.put("skills",    c.getParsedSkills());
+                                    r.put("skills",       c.getParsedSkills());
+                                    r.put("hired",        c.getHiredAt() != null);
+                                    r.put("hiredCompany", c.getHiredCompanyName());
                                 });
                                 return r;
                             }).toList();
@@ -349,6 +356,7 @@ public class AdminService {
                 reportData.put("totalCandidates",  userRepository.findByRole(Role.CANDIDATE).size());
                 reportData.put("totalEmployers",   userRepository.findByRole(Role.EMPLOYER).size());
                 reportData.put("totalReviews",     reviewRepository.count());
+                reportData.put("hiredCandidates",  candidateRepository.findAll().stream().filter(c -> c.getHiredAt() != null).count());
             }
             default -> throw new IllegalArgumentException("Invalid filter. Please enter valid criteria.");
         }
@@ -477,6 +485,51 @@ public class AdminService {
             m.put("createdAt",   r.getCreatedAt().toString());
             return m;
         }).toList();
+    }
+
+    @Transactional
+    public List<Map<String, Object>> getUserActivity(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        List<Map<String, Object>> events = new ArrayList<>();
+
+        Map<String, Object> reg = new LinkedHashMap<>();
+        reg.put("type",      "REGISTERED");
+        reg.put("label",     "Joined Swift Hire");
+        reg.put("timestamp", user.getCreatedAt().toString());
+        events.add(reg);
+
+        reviewRepository.findByRatee(user).forEach(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("type",      "REVIEW_RECEIVED");
+            m.put("label",     "Received " + r.getRatingValue() + "★ review from " + r.getRater().getName());
+            m.put("timestamp", r.getCreatedAt().toString());
+            events.add(m);
+        });
+
+        reviewRepository.findByRater(user).forEach(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("type",      "REVIEW_WRITTEN");
+            m.put("label",     "Wrote " + r.getRatingValue() + "★ review for " + r.getRatee().getName());
+            m.put("timestamp", r.getCreatedAt().toString());
+            events.add(m);
+        });
+
+        if (user.getRole() == Role.EMPLOYER) {
+            employerRepository.findByUserId(userId).ifPresent(employer ->
+                    jobPostingRepository.findByEmployer(employer).forEach(j -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("type",      "JOB_POSTED");
+                        m.put("label",     "Posted job: " + j.getJobTitle());
+                        m.put("timestamp", j.getCreatedAt().toString());
+                        events.add(m);
+                    })
+            );
+        }
+
+        events.sort((a, b) -> ((String) b.get("timestamp")).compareTo((String) a.get("timestamp")));
+        return events;
     }
 
     public List<Map<String, Object>> getReportHistory() {

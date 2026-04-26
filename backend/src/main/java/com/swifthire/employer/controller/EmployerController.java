@@ -41,4 +41,15 @@ public class EmployerController {
         employerService.updateProfile(userDetails.getUsername(), updates);
         return ResponseEntity.ok(ApiResponse.ok("Profile updated successfully.", null));
     }
+
+    // Hire flow: mark a candidate as hired for a specific job posting
+    @PostMapping("/candidates/{candidateId}/hire")
+    public ResponseEntity<ApiResponse<Void>> hireCandidate(
+            @PathVariable Long candidateId,
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long jobPostingId = Long.valueOf(body.get("jobPostingId").toString());
+        employerService.hireCandidate(candidateId, jobPostingId, userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok("Candidate hired successfully.", null));
+    }
 }

@@ -138,6 +138,8 @@ public class ScheduleController {
                 m.put("status",          s.getStatus().name());
                 m.put("calendlyLink",    s.getCalendlyLink());
                 m.put("hasReviewed",     hasReviewed);
+                m.put("hired",           candidate.getHiredAt() != null);
+                m.put("hiredCompanyName", candidate.getHiredCompanyName());
                 return m;
             }).toList();
         } else {
@@ -159,6 +161,9 @@ public class ScheduleController {
                 m.put("status",          s.getStatus().name());
                 m.put("calendlyLink",    s.getCalendlyLink());
                 m.put("hasReviewed",     hasReviewed);
+                m.put("candidateId",     s.getCandidate().getId());
+                m.put("jobPostingId",    s.getJobPosting().getId());
+                m.put("candidateHired",  s.getCandidate().getHiredAt() != null);
                 return m;
             }).toList();
         }

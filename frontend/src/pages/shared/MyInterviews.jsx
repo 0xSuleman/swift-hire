@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { candidateApi } from '../../api/candidateApi'
 import { employerApi } from '../../api/employerApi'
 import AppLayout from '../../components/common/AppLayout'
-import { Calendar, Clock, ExternalLink, Loader2, Star, X, RefreshCw } from 'lucide-react'
+import { Calendar, Clock, ExternalLink, Loader2, Star, X, RefreshCw, CheckCircle2 } from 'lucide-react'
 
 const STATUS_COLOR = {
   PENDING:   '#F59E0B',
@@ -88,6 +88,7 @@ export default function MyInterviews() {
   const [error, setError]             = useState('')
   const [updating, setUpdating]       = useState(null)
   const [modalSlot, setModalSlot]     = useState(null)  // slot to show review modal for
+  const [hiring, setHiring]           = useState(null)  // slotId being hired
 
   const api = isCandidate ? candidateApi : employerApi
 
@@ -119,6 +120,21 @@ export default function MyInterviews() {
       load(true)
     } finally {
       setUpdating(null)
+    }
+  }
+
+  const handleHire = async (slot) => {
+    setHiring(slot.slotId)
+    setError('')
+    try {
+      await employerApi.hireCandidate(slot.candidateId, slot.jobPostingId)
+      setSlots(prev => prev.map(s =>
+        s.slotId === slot.slotId ? { ...s, candidateHired: true } : s
+      ))
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to hire candidate.')
+    } finally {
+      setHiring(null)
     }
   }
 
@@ -248,13 +264,18 @@ export default function MyInterviews() {
                       {busy ? '…' : 'Cancel'}
                     </button>
                   )}
-                  {isCandidate && slot.status === 'COMPLETED' && !slot.hasReviewed && (
+                  {isCandidate && slot.status === 'COMPLETED' && slot.hired && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, background: '#2EE5B018', border: '1px solid #2EE5B040', color: '#2EE5B0' }}>
+                      <CheckCircle2 size={12} /> Hired by {slot.hiredCompanyName}
+                    </span>
+                  )}
+                  {isCandidate && slot.status === 'COMPLETED' && !slot.hired && !slot.hasReviewed && (
                     <button onClick={() => navigate(`/candidate/rate/${slot.slotId}`)}
                       style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', border: '1px solid #F59E0B40', background: '#F59E0B18', color: '#F59E0B' }}>
                       <Star size={12} /> Rate Employer
                     </button>
                   )}
-                  {isCandidate && slot.status === 'COMPLETED' && slot.hasReviewed && (
+                  {isCandidate && slot.status === 'COMPLETED' && !slot.hired && slot.hasReviewed && (
                     <span style={{ fontSize: '0.72rem', color: '#4B5563' }}>Reviewed</span>
                   )}
 
@@ -279,6 +300,17 @@ export default function MyInterviews() {
                   )}
                   {!isCandidate && slot.status === 'COMPLETED' && slot.hasReviewed && (
                     <span style={{ fontSize: '0.72rem', color: '#4B5563' }}>Reviewed</span>
+                  )}
+                  {!isCandidate && slot.status === 'COMPLETED' && !slot.candidateHired && (
+                    <button onClick={() => handleHire(slot)} disabled={hiring === slot.slotId}
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', border: '1px solid #2EE5B040', background: '#2EE5B018', color: '#2EE5B0' }}>
+                      <CheckCircle2 size={12} /> {hiring === slot.slotId ? '…' : 'Hire'}
+                    </button>
+                  )}
+                  {!isCandidate && slot.status === 'COMPLETED' && slot.candidateHired && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', fontWeight: 600, color: '#2EE5B0' }}>
+                      <CheckCircle2 size={12} /> Hired ✓
+                    </span>
                   )}
 
                 </div>

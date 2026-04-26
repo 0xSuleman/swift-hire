@@ -20,6 +20,8 @@ function ProfileModal({ userId, onClose }) {
   const [interviewsLoading, setInterviewsLoading] = useState(false)
   const [reviews, setReviews]                     = useState(null)
   const [reviewsLoading, setReviewsLoading]       = useState(false)
+  const [activity, setActivity]                   = useState(null)
+  const [activityLoading, setActivityLoading]     = useState(false)
 
   useEffect(() => {
     adminApi.getUserDetail(userId)
@@ -40,6 +42,12 @@ function ProfileModal({ userId, onClose }) {
       adminApi.getUserReviews(userId)
         .then(res => setReviews(res.data.data))
         .finally(() => setReviewsLoading(false))
+    }
+    if (t === 'activity' && activity === null) {
+      setActivityLoading(true)
+      adminApi.getUserActivity(userId)
+        .then(res => setActivity(res.data.data))
+        .finally(() => setActivityLoading(false))
     }
   }
 
@@ -85,7 +93,7 @@ function ProfileModal({ userId, onClose }) {
 
             {/* Tab bar */}
             <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: 18 }}>
-              {['profile', 'interviews', 'reviews'].map(t => (
+              {['profile', 'interviews', 'reviews', 'activity'].map(t => (
                 <button key={t} onClick={() => switchTab(t)}
                   style={{
                     padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer',
@@ -111,6 +119,14 @@ function ProfileModal({ userId, onClose }) {
                 {detail.role === 'CANDIDATE' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <Divider label="Candidate Details" />
+                    {detail.hiredCompanyName && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'rgba(46,229,176,0.06)', border: '1px solid rgba(46,229,176,0.2)' }}>
+                        <CheckCircle2 size={13} style={{ color: '#2EE5B0', flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.78rem', color: '#2EE5B0', fontWeight: 600 }}>
+                          Hired by {detail.hiredCompanyName} — {detail.hiredJobTitle}
+                        </span>
+                      </div>
+                    )}
                     {detail.preferredLocation && <Row icon={<MapPin size={13} />} label="Location" value={detail.preferredLocation} />}
                     {detail.preferredShift    && <Row icon={<Clock size={13} />} label="Shift" value={detail.preferredShift} />}
                     {detail.workType          && <Row icon={<Monitor size={13} />} label="Work type" value={detail.workType} />}
@@ -226,6 +242,38 @@ function ProfileModal({ userId, onClose }) {
                         {r.comment && <p style={{ margin: 0, fontSize: '0.8rem', color: '#9CA3AF', lineHeight: 1.5 }}>{r.comment}</p>}
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Activity tab ── */}
+            {tab === 'activity' && (
+              <div>
+                {activityLoading && (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
+                    <Loader2 size={18} style={{ color: '#2EE5B0', animation: 'spin 1s linear infinite' }} />
+                  </div>
+                )}
+                {!activityLoading && activity !== null && activity.length === 0 && (
+                  <p style={{ color: '#4B5563', fontSize: '0.85rem', textAlign: 'center', padding: '24px 0' }}>No activity recorded.</p>
+                )}
+                {!activityLoading && activity && activity.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {activity.map((ev, i) => {
+                      const dot = ev.type === 'REGISTERED' ? '#2EE5B0'
+                                : ev.type === 'JOB_POSTED'  ? '#818CF8'
+                                : '#F59E0B'
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: dot, flexShrink: 0, marginTop: 5 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: '0 0 2px', fontSize: '0.82rem', color: '#9CA3AF' }}>{ev.label}</p>
+                            <p style={{ margin: 0, fontSize: '0.72rem', color: '#4B5563' }}>{new Date(ev.timestamp).toLocaleString()}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>

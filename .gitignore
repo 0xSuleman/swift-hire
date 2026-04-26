@@ -24,6 +24,7 @@ frontend/.env
 # Environment / secrets — never commit
 .env
 application-prod.properties
+application-secrets.properties
 
 # OS
 .DS_Store

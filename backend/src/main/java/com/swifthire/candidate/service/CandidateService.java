@@ -48,6 +48,12 @@ public class CandidateService {
         profile.put("preferredShift", candidate.getPreferredShift());
         profile.put("workType", candidate.getWorkType());
         profile.put("profileViews", candidate.getProfileViews());
+        if (candidate.getHiredAt() != null) {
+            profile.put("hiredAt",           candidate.getHiredAt().toString());
+            profile.put("hiredCompanyName",  candidate.getHiredCompanyName());
+            profile.put("hiredJobTitle",     candidate.getHiredJobTitle());
+            profile.put("hiredEmployerEmail",candidate.getHiredEmployerEmail());
+        }
         return profile;
     }
 

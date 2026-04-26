@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { adminApi } from '../../api/adminApi'
 import AppLayout from '../../components/common/AppLayout'
-import { FileText, Calendar, AlertCircle, Loader2, Download, History, ChevronDown, ChevronUp } from 'lucide-react'
+import { FileText, Calendar, AlertCircle, Loader2, Download, History, ChevronDown, ChevronUp, Search } from 'lucide-react'
 
 const CATEGORIES = [
   { value: 'users',     label: 'Users' },
@@ -118,6 +118,7 @@ export default function SystemReports() {
   const [history, setHistory]   = useState([])
   const [historyFilter, setHistoryFilter] = useState('')
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [tableFilter, setTableFilter] = useState('')
 
   const loadHistory = async () => {
     setHistoryLoading(true)
@@ -133,27 +134,52 @@ export default function SystemReports() {
 
   useEffect(() => { loadHistory() }, [])
 
-  const exportCsv = async () => {
-    setExporting(true)
-    try {
-      const res = await adminApi.exportReport(params)
-      const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }))
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `report-${params.category}.csv`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch {
-      setError('Export failed. Generate a report first.')
-    } finally {
-      setExporting(false)
+  const filterRecords = (arr) =>
+    tableFilter.trim()
+      ? arr.filter(r => Object.values(r).some(v => String(v ?? '').toLowerCase().includes(tableFilter.toLowerCase())))
+      : arr
+
+  const exportCsv = () => {
+    if (!report) { setError('Generate a report first.'); return }
+    const sections = []
+    if (report.candidateRecords !== undefined) {
+      const rows = filterRecords(report.candidateRecords)
+      if (rows.length > 0) sections.push({ header: 'CANDIDATES', rows })
     }
+    if (report.employerRecords !== undefined) {
+      const rows = filterRecords(report.employerRecords)
+      if (rows.length > 0) sections.push({ header: 'EMPLOYERS', rows })
+    }
+    if (report.records !== undefined) {
+      const rows = filterRecords(report.records)
+      if (rows.length > 0) sections.push({ header: '', rows })
+    }
+    let csv = ''
+    sections.forEach(({ header, rows }, idx) => {
+      if (idx > 0) csv += '\n'
+      if (header) csv += header + '\n'
+      csv += Object.keys(rows[0]).join(',') + '\n'
+      rows.forEach(r => {
+        csv += Object.values(r).map(v => (v == null ? '' : String(v).replace(/,/g, ';'))).join(',') + '\n'
+      })
+    })
+    if (!csv) { setError('No records to export.'); return }
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `report-${params.category}${tableFilter ? '-filtered' : ''}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const generate = async e => {
     e.preventDefault()
     setError('')
 
+    if (params.from && params.from > TODAY) {
+      setError('The "From" date cannot be in the future.')
+      return
+    }
     if (params.to && params.to > TODAY) {
       setError('The "To" date cannot be in the future.')
       return
@@ -164,6 +190,7 @@ export default function SystemReports() {
     }
 
     setReport(null)
+    setTableFilter('')
     setLoading(true)
     try {
       const res = await adminApi.getReport(params)
@@ -270,7 +297,7 @@ export default function SystemReports() {
                     <div style={{ position: 'relative' }}>
                       <Calendar size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#4B5563', pointerEvents: 'none' }} />
                       <input type="date" value={params[key]}
-                        max={key === 'to' ? TODAY : undefined}
+                        max={TODAY}
                         onChange={e => setParams(p => ({ ...p, [key]: e.target.value }))}
                         style={{ ...inputStyle, width: '100%' }} />
                     </div>
@@ -315,26 +342,38 @@ export default function SystemReports() {
                 </div>
               )}
 
+              {/* Table filter */}
+              <div style={{ position: 'relative', marginBottom: 14 }}>
+                <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#4B5563', pointerEvents: 'none' }} />
+                <input
+                  type="text"
+                  placeholder="Filter records..."
+                  value={tableFilter}
+                  onChange={e => setTableFilter(e.target.value)}
+                  style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#9CA3AF', padding: '7px 12px 7px 30px', fontSize: '0.82rem', outline: 'none', width: '100%' }}
+                />
+              </div>
+
               {/* Grouped records (users / ratings) */}
               {report.candidateRecords !== undefined && (
                 <ReportSection
                   label="Candidates"
                   color="#2EE5B0"
-                  records={report.candidateRecords}
+                  records={filterRecords(report.candidateRecords)}
                 />
               )}
               {report.employerRecords !== undefined && (
                 <ReportSection
                   label="Employers"
                   color="#818CF8"
-                  records={report.employerRecords}
+                  records={filterRecords(report.employerRecords)}
                   style={{ marginTop: report.candidateRecords !== undefined ? 20 : 0 }}
                 />
               )}
 
               {/* Flat records (jobs) */}
               {records !== undefined && (
-                <ReportSection label="" color="#6B7280" records={records} />
+                <ReportSection label="" color="#6B7280" records={filterRecords(records)} />
               )}
             </div>
           )}

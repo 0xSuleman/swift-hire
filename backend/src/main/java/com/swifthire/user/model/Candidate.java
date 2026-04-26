@@ -2,6 +2,7 @@ package com.swifthire.user.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "candidates")
@@ -30,6 +31,12 @@ public class Candidate {
 
     @Builder.Default
     private long profileViews = 0L;
+
+    // Hiring status — set when an employer marks this candidate as hired
+    private LocalDateTime hiredAt;
+    private String hiredCompanyName;
+    private String hiredJobTitle;
+    private String hiredEmployerEmail;
 
     // ACD attribute — derived from MatchScore (contextual per-job, not persisted)
     @Transient
