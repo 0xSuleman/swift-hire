@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { adminApi } from '../../api/adminApi'
 import AppLayout from '../../components/common/AppLayout'
-import { FileText, Calendar, AlertCircle, Loader2, Download } from 'lucide-react'
+import { FileText, Calendar, AlertCircle, Loader2, Download, History, ChevronDown, ChevronUp } from 'lucide-react'
 
 const CATEGORIES = [
   { value: 'users',     label: 'Users' },
@@ -10,12 +10,128 @@ const CATEGORIES = [
   { value: 'analytics', label: 'Analytics' },
 ]
 
+const TODAY = new Date().toISOString().split('T')[0]
+
+function StatCard({ label, value }) {
+  return (
+    <div style={{ padding: '14px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span style={{ fontSize: '0.7rem', color: '#4B5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+      <span style={{ fontSize: '1.3rem', fontWeight: 700, color: '#E8EAF0' }}>{value}</span>
+    </div>
+  )
+}
+
+function ReportTable({ records }) {
+  if (!records || records.length === 0) return null
+  const keys = Object.keys(records[0])
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            {keys.map(k => (
+              <th key={k} style={{ padding: '9px 14px', textAlign: 'left', color: '#4B5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                {k.replace(/([A-Z])/g, ' $1').trim()}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {records.map((row, i) => (
+            <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              {keys.map(k => (
+                <td key={k} style={{ padding: '9px 14px', color: '#9CA3AF', whiteSpace: 'nowrap', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {row[k] ?? '—'}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function ReportSection({ label, color, records }) {
+  return (
+    <div>
+      {label && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, marginTop: 4 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+          <span style={{ fontSize: '0.72rem', color: '#4B5563' }}>— {records.length} record{records.length !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+      {records.length === 0
+        ? <p style={{ color: '#4B5563', fontSize: '0.82rem', margin: '0 0 16px' }}>No records found.</p>
+        : <div style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, overflow: 'hidden', marginBottom: label ? 0 : 0 }}>
+            <ReportTable records={records} />
+          </div>
+      }
+    </div>
+  )
+}
+
+function HistoryRow({ entry }) {
+  const [expanded, setExpanded] = useState(false)
+  let parsedData = null
+  try { parsedData = JSON.parse(entry.data) } catch { parsedData = null }
+
+  return (
+    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 16px', cursor: 'pointer' }} onClick={() => setExpanded(x => !x)}>
+        <span style={{ padding: '2px 10px', borderRadius: 9999, background: 'rgba(46,229,176,0.06)', border: '1px solid rgba(46,229,176,0.15)', color: '#2EE5B0', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase' }}>
+          {entry.reportType}
+        </span>
+        <span style={{ fontSize: '0.78rem', color: '#6B7280', flex: 1 }}>
+          {entry.dateRangeFrom || '—'} → {entry.dateRangeTo || '—'}
+        </span>
+        <span style={{ fontSize: '0.72rem', color: '#4B5563', whiteSpace: 'nowrap' }}>
+          {new Date(entry.generatedAt).toLocaleString()}
+        </span>
+        {expanded ? <ChevronUp size={13} style={{ color: '#4B5563', flexShrink: 0 }} /> : <ChevronDown size={13} style={{ color: '#4B5563', flexShrink: 0 }} />}
+      </div>
+      {expanded && parsedData && (
+        <div style={{ padding: '0 16px 14px' }}>
+          {parsedData.records
+            ? <ReportTable records={parsedData.records} />
+            : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {Object.entries(parsedData).map(([k, v]) => (
+                  typeof v !== 'object' && <StatCard key={k} label={k.replace(/([A-Z])/g, ' $1').trim()} value={v} />
+                ))}
+              </div>
+            )
+          }
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SystemReports() {
-  const [params, setParams] = useState({ category: 'users', from: '', to: '' })
-  const [report, setReport] = useState(null)
-  const [error, setError]   = useState('')
-  const [loading, setLoading] = useState(false)
+  const [params, setParams]     = useState({ category: 'users', from: '', to: '', userType: '' })
+  const [report, setReport]     = useState(null)
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [history, setHistory]   = useState([])
+  const [historyFilter, setHistoryFilter] = useState('')
+  const [historyLoading, setHistoryLoading] = useState(false)
+
+  const loadHistory = async () => {
+    setHistoryLoading(true)
+    try {
+      const res = await adminApi.getReportHistory()
+      setHistory(res.data.data)
+    } catch {
+      // non-critical
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
+  useEffect(() => { loadHistory() }, [])
 
   const exportCsv = async () => {
     setExporting(true)
@@ -37,15 +153,22 @@ export default function SystemReports() {
   const generate = async e => {
     e.preventDefault()
     setError('')
+
+    if (params.to && params.to > TODAY) {
+      setError('The "To" date cannot be in the future.')
+      return
+    }
     if (params.from && params.to && params.from > params.to) {
       setError('"From" date must be before "To" date.')
       return
     }
+
     setReport(null)
     setLoading(true)
     try {
       const res = await adminApi.getReport(params)
       setReport(res.data.data)
+      loadHistory()
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid filter. Please enter valid criteria.')
     } finally {
@@ -59,94 +182,197 @@ export default function SystemReports() {
     fontSize: '0.82rem', outline: 'none', colorScheme: 'dark',
   }
 
+  const summaryKeys = report ? Object.entries(report).filter(([, v]) => v !== null && typeof v !== 'object') : []
+  const records     = report?.records  // used only by jobs report
+
+  const filteredHistory = historyFilter
+    ? history.filter(h => h.reportType === historyFilter)
+    : history
+
   return (
-    <AppLayout>
-      <div className="page-header">
-        <h1 className="page-title">System Reports</h1>
-        <p className="page-subtitle">Generate platform-wide reports by category and date range.</p>
-      </div>
+    <>
+      {/* Floating error */}
+      {error && (
+        <div style={{
+          position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
+          display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 10,
+          background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+          color: '#FCA5A5', fontSize: '0.82rem', fontWeight: 500,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.4)', whiteSpace: 'nowrap',
+        }}>
+          <AlertCircle size={15} style={{ flexShrink: 0 }} /> {error}
+        </div>
+      )}
 
-      <div style={{ maxWidth: 680 }}>
-        <form onSubmit={generate}>
-          <div className="app-card" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <AppLayout>
+        <div className="page-header">
+          <h1 className="page-title">System Reports</h1>
+          <p className="page-subtitle">Generate platform-wide reports by category and date range.</p>
+        </div>
 
-            {/* Category tabs */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: '#4B5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-                Report Category
-              </label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {CATEGORIES.map(({ value, label }) => {
-                  const active = params.category === value
-                  return (
-                    <button key={value} type="button" onClick={() => setParams(p => ({ ...p, category: value }))}
-                      style={{
-                        padding: '7px 16px', borderRadius: 9999, fontSize: '0.82rem', fontWeight: 500,
-                        border: `1px solid ${active ? 'rgba(46,229,176,0.4)' : 'rgba(255,255,255,0.07)'}`,
-                        background: active ? 'rgba(46,229,176,0.08)' : 'transparent',
-                        color: active ? '#2EE5B0' : '#6B7280', cursor: 'pointer', transition: 'all 0.18s',
-                      }}>
-                      {label}
-                    </button>
-                  )
-                })}
+        <div style={{ maxWidth: 700 }}>
+          <form onSubmit={generate}>
+            <div className="app-card" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+              {/* Category tabs */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#4B5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                  Report Category
+                </label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {CATEGORIES.map(({ value, label }) => {
+                    const active = params.category === value
+                    return (
+                      <button key={value} type="button" onClick={() => setParams(p => ({ ...p, category: value, userType: '' }))}
+                        style={{
+                          padding: '7px 16px', borderRadius: 9999, fontSize: '0.82rem', fontWeight: 500,
+                          border: `1px solid ${active ? 'rgba(46,229,176,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                          background: active ? 'rgba(46,229,176,0.08)' : 'transparent',
+                          color: active ? '#2EE5B0' : '#6B7280', cursor: 'pointer', transition: 'all 0.18s',
+                        }}>
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
 
-            {/* Date range */}
-            <div className="two-col-grid" style={{ gap: 14 }}>
-              {[['from', 'From'], ['to', 'To']].map(([key, label]) => (
-                <div key={key}>
-                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>{label}</label>
-                  <div style={{ position: 'relative' }}>
-                    <Calendar size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#4B5563', pointerEvents: 'none' }} />
-                    <input type="date" value={params[key]}
-                      onChange={e => setParams(p => ({ ...p, [key]: e.target.value }))}
-                      style={{ ...inputStyle, width: '100%' }} />
+              {/* UserType sub-filter (users category only) */}
+              {params.category === 'users' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#4B5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                    User Type
+                  </label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {[['', 'All'], ['CANDIDATE', 'Candidates'], ['EMPLOYER', 'Employers']].map(([val, lbl]) => {
+                      const active = params.userType === val
+                      return (
+                        <button key={val} type="button" onClick={() => setParams(p => ({ ...p, userType: val }))}
+                          style={{
+                            padding: '6px 14px', borderRadius: 9999, fontSize: '0.78rem', fontWeight: 500,
+                            border: `1px solid ${active ? 'rgba(129,140,248,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                            background: active ? 'rgba(129,140,248,0.1)' : 'transparent',
+                            color: active ? '#818CF8' : '#6B7280', cursor: 'pointer', transition: 'all 0.18s',
+                          }}>
+                          {lbl}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
-              ))}
+              )}
+
+              {/* Date range */}
+              <div className="two-col-grid" style={{ gap: 14 }}>
+                {[['from', 'From'], ['to', 'To']].map(([key, label]) => (
+                  <div key={key}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>{label}</label>
+                    <div style={{ position: 'relative' }}>
+                      <Calendar size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#4B5563', pointerEvents: 'none' }} />
+                      <input type="date" value={params[key]}
+                        max={key === 'to' ? TODAY : undefined}
+                        onChange={e => setParams(p => ({ ...p, [key]: e.target.value }))}
+                        style={{ ...inputStyle, width: '100%' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button type="submit" className="btn-teal" disabled={loading}>
+                {loading
+                  ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Generating...
+                    </span>
+                  : <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      <FileText size={15} /> Generate Report
+                    </span>
+                }
+              </button>
+            </div>
+          </form>
+
+          {/* Report output */}
+          {report && (
+            <div className="app-card" style={{ marginTop: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <p style={{ fontSize: '0.75rem', color: '#4B5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
+                  Report Output
+                </p>
+                <button onClick={exportCsv} disabled={exporting}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: '#6B7280', fontSize: '0.75rem', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#9CA3AF'}
+                  onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}>
+                  <Download size={12} /> {exporting ? 'Exporting...' : 'Export CSV'}
+                </button>
+              </div>
+
+              {/* Summary stat cards */}
+              {summaryKeys.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10, marginBottom: 16 }}>
+                  {summaryKeys.map(([k, v]) => (
+                    <StatCard key={k} label={k.replace(/([A-Z])/g, ' $1').trim()} value={v} />
+                  ))}
+                </div>
+              )}
+
+              {/* Grouped records (users / ratings) */}
+              {report.candidateRecords !== undefined && (
+                <ReportSection
+                  label="Candidates"
+                  color="#2EE5B0"
+                  records={report.candidateRecords}
+                />
+              )}
+              {report.employerRecords !== undefined && (
+                <ReportSection
+                  label="Employers"
+                  color="#818CF8"
+                  records={report.employerRecords}
+                  style={{ marginTop: report.candidateRecords !== undefined ? 20 : 0 }}
+                />
+              )}
+
+              {/* Flat records (jobs) */}
+              {records !== undefined && (
+                <ReportSection label="" color="#6B7280" records={records} />
+              )}
+            </div>
+          )}
+
+          {/* Report History */}
+          <div style={{ marginTop: 36 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <History size={15} style={{ color: '#2EE5B0' }} />
+                <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#E8EAF0', margin: 0 }}>Previously Generated Reports</h2>
+              </div>
+              <select value={historyFilter} onChange={e => setHistoryFilter(e.target.value)}
+                style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#9CA3AF', padding: '6px 10px', fontSize: '0.78rem', outline: 'none' }}>
+                <option value="">All Categories</option>
+                {CATEGORIES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+              </select>
             </div>
 
-            {error && (
-              <div className="error-banner">
-                <AlertCircle size={15} style={{ flexShrink: 0 }} /> {error}
+            {historyLoading && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#4B5563', fontSize: '0.82rem', padding: '12px 0' }}>
+                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Loading history...
               </div>
             )}
 
-            <button type="submit" className="btn-teal" disabled={loading}>
-              {loading
-                ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Generating...
-                  </span>
-                : <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <FileText size={15} /> Generate Report
-                  </span>
-              }
-            </button>
-          </div>
-        </form>
+            {!historyLoading && filteredHistory.length === 0 && (
+              <p style={{ color: '#4B5563', fontSize: '0.82rem' }}>No reports generated yet.</p>
+            )}
 
-        {/* Report output */}
-        {report && (
-          <div className="app-card" style={{ marginTop: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <p style={{ fontSize: '0.75rem', color: '#4B5563', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
-                Report Output
-              </p>
-              <button onClick={exportCsv} disabled={exporting}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: '#6B7280', fontSize: '0.75rem', cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#9CA3AF'}
-                onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}>
-                <Download size={12} /> {exporting ? 'Exporting...' : 'Export CSV'}
-              </button>
-            </div>
-            <pre style={{ margin: 0, fontSize: '0.78rem', color: '#9CA3AF', lineHeight: 1.7, overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {JSON.stringify(report, null, 2)}
-            </pre>
+            {!historyLoading && filteredHistory.length > 0 && (
+              <div className="app-card" style={{ padding: 0, overflow: 'hidden' }}>
+                {filteredHistory.map(entry => (
+                  <HistoryRow key={entry.id} entry={entry} />
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    </AppLayout>
+        </div>
+      </AppLayout>
+    </>
   )
 }

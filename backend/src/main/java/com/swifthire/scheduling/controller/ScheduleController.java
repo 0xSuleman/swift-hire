@@ -95,7 +95,10 @@ public class ScheduleController {
         LocalDate date      = LocalDate.parse(body.get("date").toString());
         LocalTime startTime = LocalTime.parse(body.get("startTime").toString());
         LocalTime endTime   = LocalTime.parse(body.get("endTime").toString());
-        int candidateCount  = Integer.parseInt(body.get("candidateCount").toString());
+
+        @SuppressWarnings("unchecked")
+        List<Long> candidateIds = ((List<Object>) body.get("candidateIds"))
+                .stream().map(o -> Long.valueOf(o.toString())).toList();
 
         LocalDateTime windowStart = LocalDateTime.of(date, startTime);
         LocalDateTime windowEnd   = LocalDateTime.of(date, endTime);
@@ -104,7 +107,7 @@ public class ScheduleController {
             throw new IllegalArgumentException("Interview window cannot be scheduled in the past.");
         }
 
-        var slots = scheduleService.previewBatch(employer.getId(), windowStart, windowEnd, candidateCount);
+        var slots = scheduleService.previewBatch(employer.getId(), windowStart, windowEnd, candidateIds);
         return ResponseEntity.ok(ApiResponse.ok("Preview ready.", slots));
     }
 

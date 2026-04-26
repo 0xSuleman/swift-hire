@@ -21,13 +21,14 @@ public class AdminController {
 
     private final AdminService adminService;
 
-    // UC-13: List users with optional filters (role, rating, status)
+    // UC-13: List users with optional filters (role, rating, status, search)
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<Object>> getUsers(
             @RequestParam(required = false) String role,
             @RequestParam(required = false) Double maxRating,
-            @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.getUsers(role, maxRating, status)));
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getUsers(role, maxRating, status, search)));
     }
 
     // UC-13: View single user detail
@@ -86,13 +87,26 @@ public class AdminController {
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam String category,
             @RequestParam(required = false) String from,
-            @RequestParam(required = false) String to) {
-        String csv = adminService.exportReportCsv(category, from, to, userDetails.getUsername());
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) String userType) {
+        String csv = adminService.exportReportCsv(category, from, to, userType, userDetails.getUsername());
         byte[] bytes = csv.getBytes();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("text/csv"));
         headers.setContentDispositionFormData("attachment", "report-" + category + ".csv");
         return ResponseEntity.ok().headers(headers).body(bytes);
+    }
+
+    // UC-13: View interviews scheduled for a user
+    @GetMapping("/users/{userId}/interviews")
+    public ResponseEntity<ApiResponse<Object>> getUserInterviews(@PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getUserInterviews(userId)));
+    }
+
+    // UC-13: View reviews received by a user
+    @GetMapping("/users/{userId}/reviews")
+    public ResponseEntity<ApiResponse<Object>> getUserReviews(@PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getUserReviews(userId)));
     }
 
     // UC-14: View history of generated reports (ACD: Admin Views GraphicalReport 1:0..*)
