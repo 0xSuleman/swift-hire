@@ -1,6 +1,5 @@
 package com.swifthire.scheduling.repository;
 
-import com.swifthire.job.model.JobPosting;
 import com.swifthire.scheduling.model.InterviewSlot;
 import com.swifthire.user.model.Candidate;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,7 +12,7 @@ public interface InterviewSlotRepository extends JpaRepository<InterviewSlot, Lo
 
     List<InterviewSlot> findByCandidate(Candidate candidate);
 
-    boolean existsByCandidateAndJobPosting(Candidate candidate, JobPosting jobPosting);
+    boolean existsByCandidateAndWindow_EmployerAndStatusNot(Candidate candidate, com.swifthire.user.model.Employer employer, InterviewSlot.SlotStatus status);
 
     // Conflict detection: check for overlapping slots in a window (UC-04)
     @Query("SELECT s FROM InterviewSlot s WHERE s.window.id = :windowId " +

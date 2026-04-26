@@ -74,6 +74,11 @@ public class ScheduleController {
 
         ScheduleService.ScheduleResult result = scheduleService.scheduleBatch(jobPostingId, candidateIds, window);
 
+        if (result.slots().isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.ok(
+                    "All selected candidates are already scheduled with your company.", 0));
+        }
+
         String message = result.allEmailsSent()
                 ? "Schedule created. Invitations sent to " + result.slots().size() + " candidate(s)."
                 : "Schedule created, but invitations could not be sent. Try again later.";

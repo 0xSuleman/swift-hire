@@ -130,7 +130,8 @@ public class ScheduleService {
             Candidate candidate = candidateRepository.findById(candidateId)
                     .orElseThrow(() -> new IllegalArgumentException("Candidate not found: " + candidateId));
 
-            if (slotRepository.existsByCandidateAndJobPosting(candidate, job)) {
+            if (slotRepository.existsByCandidateAndWindow_EmployerAndStatusNot(
+                    candidate, window.getEmployer(), InterviewSlot.SlotStatus.CANCELLED)) {
                 continue;
             }
 
