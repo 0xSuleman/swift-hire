@@ -30,8 +30,9 @@ public class AtsScoreService {
 
         List<Candidate> allCandidates = candidateRepository.findAll();
 
-        // Score each candidate
+        // Score each candidate — exclude hired candidates from the active pool
         List<MatchScore> scores = allCandidates.stream()
+                .filter(c -> c.getHiredAt() == null)
                 .filter(c -> c.getParsedSkills() != null && !c.getParsedSkills().isBlank())
                 .map(candidate -> {
                     double pct = calculateMatch(parseTags(candidate.getParsedSkills()), requiredTags);

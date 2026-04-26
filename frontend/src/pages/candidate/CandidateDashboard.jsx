@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { candidateApi } from '../../api/candidateApi'
 import AppLayout from '../../components/common/AppLayout'
-import { User, Briefcase, BarChart2, ArrowRight } from 'lucide-react'
+import { User, Briefcase, BarChart2, ArrowRight, CheckCircle2, Mail } from 'lucide-react'
 
 const QUICK_LINKS = [
   { label: 'Complete Profile',      desc: 'Upload your CV and set preferences',  to: '/candidate/profile',   Icon: User,     color: '#2EE5B0' },
@@ -12,6 +14,11 @@ const QUICK_LINKS = [
 export default function CandidateDashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [profile, setProfile] = useState(null)
+
+  useEffect(() => {
+    candidateApi.getProfile().then(res => setProfile(res.data.data)).catch(() => {})
+  }, [])
 
   return (
     <AppLayout>
@@ -22,6 +29,41 @@ export default function CandidateDashboard() {
         <h1 className="page-title">{user?.name}</h1>
         <p className="page-subtitle">Here's what's waiting for you today.</p>
       </div>
+
+      {/* Hired banner */}
+      {profile?.hiredAt && (
+        <div style={{
+          marginBottom: 28, padding: '20px 24px', borderRadius: 14,
+          background: 'rgba(46,229,176,0.06)', border: '1px solid rgba(46,229,176,0.25)',
+          display: 'flex', flexDirection: 'column', gap: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(46,229,176,0.12)', border: '1px solid rgba(46,229,176,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <CheckCircle2 size={18} style={{ color: '#2EE5B0' }} />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#2EE5B0' }}>
+                You've been hired by {profile.hiredCompanyName}!
+              </p>
+              <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#6B7280' }}>
+                Role: <span style={{ color: '#9CA3AF' }}>{profile.hiredJobTitle}</span>
+                {' · '}
+                Since {new Date(profile.hiredAt).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 46 }}>
+            <Mail size={13} style={{ color: '#4B5563', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.78rem', color: '#6B7280' }}>
+              Contact your employer at{' '}
+              <a href={`mailto:${profile.hiredEmployerEmail}`} style={{ color: '#2EE5B0', textDecoration: 'none' }}>
+                {profile.hiredEmployerEmail}
+              </a>
+              {' '}for onboarding details. Check your email for your offer confirmation.
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="stat-grid">
         {QUICK_LINKS.map(({ label, desc, to, Icon, color }) => (

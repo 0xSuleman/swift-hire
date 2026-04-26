@@ -1,12 +1,18 @@
 package com.swifthire.employer.service;
 
+import com.swifthire.automation.service.EmailService;
 import com.swifthire.common.exception.ResourceNotFoundException;
+import com.swifthire.job.model.JobPosting;
+import com.swifthire.job.repository.JobPostingRepository;
+import com.swifthire.user.model.Candidate;
+import com.swifthire.user.repository.CandidateRepository;
 import com.swifthire.user.repository.EmployerRepository;
 import com.swifthire.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -16,6 +22,9 @@ public class EmployerService {
 
     private final UserRepository userRepository;
     private final EmployerRepository employerRepository;
+    private final CandidateRepository candidateRepository;
+    private final JobPostingRepository jobPostingRepository;
+    private final EmailService emailService;
 
     public Map<String, Object> getProfile(String email) {
         var user = userRepository.findByEmail(email)
@@ -54,5 +63,36 @@ public class EmployerService {
         if (updates.containsKey("name"))            user.setName(updates.get("name"));
         employerRepository.save(employer);
         userRepository.save(user);
+    }
+
+    @Transactional
+    public void hireCandidate(Long candidateId, Long jobPostingId, String employerEmail) {
+        var empUser  = userRepository.findByEmail(employerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+        var employer = employerRepository.findByUserId(empUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Employer profile not found."));
+
+        Candidate candidate = candidateRepository.findById(candidateId)
+                .orElseThrow(() -> new ResourceNotFoundException("Candidate not found."));
+        JobPosting job = jobPostingRepository.findById(jobPostingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job posting not found."));
+
+        if (!job.getEmployer().getId().equals(employer.getId()))
+            throw new IllegalArgumentException("Job does not belong to this employer.");
+        if (candidate.getHiredAt() != null)
+            throw new IllegalStateException("Candidate is already hired.");
+
+        candidate.setHiredAt(LocalDateTime.now());
+        candidate.setHiredCompanyName(employer.getCompanyName());
+        candidate.setHiredJobTitle(job.getJobTitle());
+        candidate.setHiredEmployerEmail(empUser.getEmail());
+        candidateRepository.save(candidate);
+
+        emailService.sendHireConfirmationToCandidate(
+                candidate.getUser().getEmail(), candidate.getUser().getName(),
+                employer.getCompanyName(), job.getJobTitle(), empUser.getEmail());
+        emailService.sendHireFillConfirmationToEmployer(
+                empUser.getEmail(), empUser.getName(),
+                candidate.getUser().getName(), candidate.getUser().getEmail(), job.getJobTitle());
     }
 }

@@ -16,4 +16,5 @@ export const employerApi = {
   updateJob:            (jobId, data)    => api.put(`/jobs/${jobId}`, data),
   deleteJob:            (jobId)          => api.delete(`/jobs/${jobId}`),
   getSlot:              (slotId)         => api.get(`/schedule/slots/${slotId}`),
+  hireCandidate:        (candidateId, jobPostingId) => api.post(`/employer/candidates/${candidateId}/hire`, { jobPostingId }),
 }

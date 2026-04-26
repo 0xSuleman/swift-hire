@@ -230,6 +230,44 @@ public class EmailService {
         send(toEmail, subject, wrap(content));
     }
 
+    // Hire flow: congratulations email to candidate
+    @Async
+    @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000))
+    public void sendHireConfirmationToCandidate(String toEmail, String name,
+                                                String companyName, String jobTitle,
+                                                String employerEmail) {
+        String subject = "Swift Hire — Congratulations, You've Been Hired!";
+        String content = heading("You've Been Hired! 🎉")
+                + subtext("Hi <strong style=\"color:#E8EAF0;\">" + name + "</strong>, congratulations! You have been selected for the following position:")
+                + infoTable(
+                    infoRow("Company",   companyName)
+                  + infoRow("Role",      jobTitle)
+                  + infoRow("Contact",   "<a href=\"mailto:" + employerEmail + "\" style=\"color:#2EE5B0;text-decoration:none;\">" + employerEmail + "</a>")
+                )
+                + subtext("Your employer will reach out with onboarding details. Check your inbox and get ready for your new journey!")
+                + "<p style=\"margin:16px 0 0;font-size:13px;color:#4B5563;\">Best of luck in your new role! 🚀</p>";
+        send(toEmail, subject, wrap(content));
+    }
+
+    // Hire flow: position-filled confirmation to employer
+    @Async
+    @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000))
+    public void sendHireFillConfirmationToEmployer(String toEmail, String name,
+                                                   String candidateName, String candidateEmail,
+                                                   String jobTitle) {
+        String subject = "Swift Hire — Position Filled";
+        String content = heading("Position Filled ✅")
+                + subtext("Hi <strong style=\"color:#E8EAF0;\">" + name + "</strong>, this is a confirmation that the following candidate has been successfully hired:")
+                + infoTable(
+                    infoRow("Candidate", candidateName)
+                  + infoRow("Email",     "<a href=\"mailto:" + candidateEmail + "\" style=\"color:#2EE5B0;text-decoration:none;\">" + candidateEmail + "</a>")
+                  + infoRow("Role",      jobTitle)
+                )
+                + subtext("The candidate has been removed from the active matching pool. You can reach them directly to begin the onboarding process.")
+                + "<p style=\"margin:16px 0 0;font-size:13px;color:#4B5563;\">Thank you for hiring through Swift Hire!</p>";
+        send(toEmail, subject, wrap(content));
+    }
+
     private void send(String to, String subject, String htmlBody) {
         try {
             Session session = Session.getInstance(new Properties());

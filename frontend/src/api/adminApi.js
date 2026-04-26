@@ -12,4 +12,5 @@ export const adminApi = {
   getReportHistory:  ()             => api.get('/admin/reports/history'),
   getUserInterviews: (userId)       => api.get(`/admin/users/${userId}/interviews`),
   getUserReviews:    (userId)       => api.get(`/admin/users/${userId}/reviews`),
+  getUserActivity:   (userId)       => api.get(`/admin/users/${userId}/activity`),
 }
