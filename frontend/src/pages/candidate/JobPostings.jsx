@@ -96,9 +96,14 @@ export default function JobPostings() {
               onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'}
             >
               {/* Rank badge */}
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: i === 0 ? 'rgba(46,229,176,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${i === 0 ? 'rgba(46,229,176,0.25)' : 'rgba(255,255,255,0.07)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {i === 0 ? <Star size={15} style={{ color: '#2EE5B0' }} /> : <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4B5563' }}>#{job.ranking}</span>}
-              </div>
+              {(() => {
+                const isUnique = i === 0 && (jobs.length === 1 || jobs[0].matchScore > jobs[1].matchScore)
+                return (
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: isUnique ? 'rgba(46,229,176,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${isUnique ? 'rgba(46,229,176,0.25)' : 'rgba(255,255,255,0.07)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {isUnique ? <Star size={15} style={{ color: '#2EE5B0' }} /> : <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4B5563' }}>#{job.ranking}</span>}
+                  </div>
+                )
+              })()}
 
               {/* Job info */}
               <div style={{ flex: 1, minWidth: 0 }}>

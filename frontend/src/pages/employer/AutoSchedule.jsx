@@ -46,7 +46,7 @@ export default function AutoSchedule() {
         date: window_.date,
         startTime: window_.startTime + ':00',
         endTime: window_.endTime + ':00',
-        candidateCount: selectedIds.length,
+        candidateIds: selectedIds,
       })
       setPreview(res.data.data)
     } catch (err) {
@@ -132,12 +132,15 @@ export default function AutoSchedule() {
           </div>
           {preview.map((slot, i) => (
             <div key={i} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '12px 20px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              padding: '14px 20px',
               borderBottom: i < preview.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
             }}>
-              <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>Slot {slot.slotNumber}</span>
-              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#E8EAF0', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#E8EAF0' }}>{slot.candidateName}</span>
+                <span style={{ fontSize: '0.72rem', color: '#4B5563' }}>{slot.candidateEmail}</span>
+              </div>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                 <Clock size={12} style={{ color: '#4B5563' }} />
                 {slot.startTime} – {slot.endTime}
               </span>

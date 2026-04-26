@@ -242,12 +242,17 @@ export default function RecommendedCandidates() {
                   </div>
 
                   {/* Rank */}
-                  <div style={{ width: 30, height: 30, borderRadius: 8, background: i === 0 ? 'rgba(46,229,176,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${i === 0 ? 'rgba(46,229,176,0.2)' : 'rgba(255,255,255,0.07)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {i === 0
-                      ? <Star size={13} style={{ color: '#2EE5B0' }} />
-                      : <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#4B5563' }}>#{c.ranking}</span>
-                    }
-                  </div>
+                  {(() => {
+                    const isUnique = i === 0 && (candidates.length === 1 || candidates[0].matchScore > candidates[1].matchScore)
+                    return (
+                      <div style={{ width: 30, height: 30, borderRadius: 8, background: isUnique ? 'rgba(46,229,176,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${isUnique ? 'rgba(46,229,176,0.2)' : 'rgba(255,255,255,0.07)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {isUnique
+                          ? <Star size={13} style={{ color: '#2EE5B0' }} />
+                          : <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#4B5563' }}>#{c.ranking}</span>
+                        }
+                      </div>
+                    )
+                  })()}
 
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>

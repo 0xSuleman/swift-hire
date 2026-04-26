@@ -24,6 +24,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,25 +47,32 @@ public class AdminService {
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
 
-    public List<Map<String, Object>> getUsers(String role, Double maxRating, String status) {
-        Role roleEnum   = role   != null ? Role.valueOf(role.toUpperCase())                 : null;
+    public List<Map<String, Object>> getUsers(String role, Double maxRating, String status, String search) {
+        Role roleEnum     = role   != null ? Role.valueOf(role.toUpperCase())                 : null;
         AccountStatus statusEnum = status != null ? AccountStatus.valueOf(status.toUpperCase()) : null;
 
         List<User> users;
         if (roleEnum != null && statusEnum != null) {
             users = userRepository.findByRoleAndAccountStatus(roleEnum, statusEnum);
-            if (maxRating != null) {
-                final double cap = maxRating;
-                users = users.stream().filter(u -> u.getAverageRating() <= cap).toList();
-            }
-        } else if (maxRating != null && roleEnum != null) {
-            users = userRepository.findByMaxRatingAndRole(maxRating, roleEnum);
         } else if (roleEnum != null) {
             users = userRepository.findByRole(roleEnum);
         } else if (statusEnum != null) {
             users = userRepository.findByAccountStatus(statusEnum);
         } else {
             users = userRepository.findAll();
+        }
+
+        if (maxRating != null) {
+            final double cap = maxRating;
+            users = users.stream().filter(u -> u.getAverageRating() <= cap).toList();
+        }
+
+        if (search != null && !search.isBlank()) {
+            final String q = search.trim().toLowerCase();
+            users = users.stream()
+                    .filter(u -> (u.getName() != null && u.getName().toLowerCase().contains(q))
+                              || u.getEmail().toLowerCase().contains(q))
+                    .toList();
         }
 
         return users.stream().filter(User::isEmailVerified).map(u -> {
@@ -90,6 +99,22 @@ public class AdminService {
         m.put("averageRating", user.getAverageRating());
         m.put("totalRatings",  user.getTotalRatings());
         m.put("createdAt",     user.getCreatedAt().toString());
+
+        if (user.getRole() == Role.CANDIDATE) {
+            candidateRepository.findByUserId(userId).ifPresent(c -> {
+                m.put("parsedSkills",      c.getParsedSkills());
+                m.put("profileViews",      c.getProfileViews());
+                m.put("preferredLocation", c.getPreferredLocation());
+                m.put("preferredShift",    c.getPreferredShift());
+                m.put("workType",          c.getWorkType());
+            });
+        } else if (user.getRole() == Role.EMPLOYER) {
+            employerRepository.findByUserId(userId).ifPresent(e -> {
+                m.put("companyName",     e.getCompanyName());
+                m.put("companyLocation", e.getCompanyLocation());
+                m.put("jobCount",        jobPostingRepository.findByEmployer(e).size());
+            });
+        }
         return m;
     }
 
@@ -110,13 +135,11 @@ public class AdminService {
         }
 
         user.setAccountStatus(newStatus);
-        // Reset lock counter when admin re-activates an account
         if (newStatus == AccountStatus.ACTIVE) {
             user.setFailedLoginAttempts(0);
         }
         userRepository.save(user);
 
-        // NFR 3.8.5 — audit log
         String logAction = action.equalsIgnoreCase("delete") ? "DEACTIVATE" : action.toUpperCase();
         auditLogRepository.save(AuditLog.builder()
                 .adminEmail(adminEmail)
@@ -131,7 +154,6 @@ public class AdminService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        // Delete all reviews this user gave or received
         reviewRepository.deleteAll(reviewRepository.findByRater(user));
         reviewRepository.deleteAll(reviewRepository.findByRatee(user));
 
@@ -159,7 +181,6 @@ public class AdminService {
             employerRepository.delete(employer);
         }
 
-        // Audit the permanent deletion
         auditLogRepository.save(AuditLog.builder()
                 .adminEmail(adminEmail)
                 .action("DELETE")
@@ -177,7 +198,6 @@ public class AdminService {
         auditLogRepository.deleteById(id);
     }
 
-    // NFR 3.8.5 — retrieve audit log for admin dashboard
     public List<Map<String, Object>> getAuditLogs() {
         return auditLogRepository.findAllByOrderByPerformedAtDesc().stream().map(log -> {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -191,7 +211,6 @@ public class AdminService {
         }).toList();
     }
 
-    // UC-14 + ACD: generateGraphicalReport() — aggregates data and persists a GraphicalReport
     @Transactional
     public Map<String, Object> generateReport(String category, String from, String to,
                                                String userType, String adminEmail) {
@@ -199,41 +218,141 @@ public class AdminService {
 
         switch (category.toLowerCase()) {
             case "users" -> {
-                reportData.put("totalUsers",   userRepository.count());
-                reportData.put("candidates",   userRepository.findByRole(Role.CANDIDATE).size());
-                reportData.put("employers",    userRepository.findByRole(Role.EMPLOYER).size());
-                reportData.put("admins",       userRepository.findByRole(Role.ADMIN).size());
-                reportData.put("active",       userRepository.findByAccountStatus(AccountStatus.ACTIVE).size());
-                reportData.put("banned",       userRepository.findByAccountStatus(AccountStatus.BANNED).size());
-                reportData.put("deactivated",  userRepository.findByAccountStatus(AccountStatus.DEACTIVATED).size());
+                Role filterRole = (userType != null && !userType.isBlank())
+                        ? Role.valueOf(userType.toUpperCase()) : null;
+                List<User> allUsers = filterRole != null
+                        ? userRepository.findByRole(filterRole)
+                        : userRepository.findAll().stream()
+                            .filter(u -> u.getRole() != Role.ADMIN).toList();
+                allUsers = allUsers.stream().filter(User::isEmailVerified).toList();
+
+                reportData.put("totalUsers",  allUsers.size());
+                reportData.put("totalCandidates", allUsers.stream().filter(u -> u.getRole() == Role.CANDIDATE).count());
+                reportData.put("totalEmployers",  allUsers.stream().filter(u -> u.getRole() == Role.EMPLOYER).count());
+                reportData.put("active",      allUsers.stream().filter(u -> u.getAccountStatus() == AccountStatus.ACTIVE).count());
+                reportData.put("banned",      allUsers.stream().filter(u -> u.getAccountStatus() == AccountStatus.BANNED).count());
+                reportData.put("deactivated", allUsers.stream().filter(u -> u.getAccountStatus() == AccountStatus.DEACTIVATED).count());
+
+                if (filterRole == null || filterRole == Role.CANDIDATE) {
+                    List<Map<String, Object>> candidateRecords = allUsers.stream()
+                            .filter(u -> u.getRole() == Role.CANDIDATE)
+                            .map(u -> {
+                                Map<String, Object> r = new LinkedHashMap<>();
+                                r.put("name",          u.getName());
+                                r.put("email",         u.getEmail());
+                                r.put("status",        u.getAccountStatus().name());
+                                r.put("averageRating", u.getAverageRating());
+                                r.put("totalRatings",  u.getTotalRatings());
+                                r.put("memberSince",   u.getCreatedAt() != null ? u.getCreatedAt().toLocalDate().toString() : "");
+                                candidateRepository.findByUserId(u.getId()).ifPresent(c -> {
+                                    r.put("location",  c.getPreferredLocation());
+                                    r.put("shift",     c.getPreferredShift());
+                                    r.put("workType",  c.getWorkType());
+                                    r.put("profileViews", c.getProfileViews());
+                                    r.put("skills",    c.getParsedSkills());
+                                });
+                                return r;
+                            }).toList();
+                    reportData.put("candidateRecords", candidateRecords);
+                }
+
+                if (filterRole == null || filterRole == Role.EMPLOYER) {
+                    List<Map<String, Object>> employerRecords = allUsers.stream()
+                            .filter(u -> u.getRole() == Role.EMPLOYER)
+                            .map(u -> {
+                                Map<String, Object> r = new LinkedHashMap<>();
+                                r.put("name",          u.getName());
+                                r.put("email",         u.getEmail());
+                                r.put("status",        u.getAccountStatus().name());
+                                r.put("averageRating", u.getAverageRating());
+                                r.put("totalRatings",  u.getTotalRatings());
+                                r.put("memberSince",   u.getCreatedAt() != null ? u.getCreatedAt().toLocalDate().toString() : "");
+                                employerRepository.findByUserId(u.getId()).ifPresent(e -> {
+                                    r.put("companyName",     e.getCompanyName());
+                                    r.put("companyLocation", e.getCompanyLocation());
+                                    r.put("jobCount",        jobPostingRepository.findByEmployer(e).size());
+                                });
+                                return r;
+                            }).toList();
+                    reportData.put("employerRecords", employerRecords);
+                }
             }
             case "jobs" -> {
-                reportData.put("totalJobs",  jobPostingRepository.count());
-                reportData.put("open",       jobPostingRepository.findByStatus(JobPosting.JobStatus.OPEN).size());
-                reportData.put("closed",     jobPostingRepository.findByStatus(JobPosting.JobStatus.CLOSED).size());
-                reportData.put("archived",   jobPostingRepository.findByStatus(JobPosting.JobStatus.ARCHIVED).size());
+                List<JobPosting> allJobs = jobPostingRepository.findAll();
+                reportData.put("totalJobs", allJobs.size());
+                reportData.put("open",      allJobs.stream().filter(j -> j.getStatus() == JobPosting.JobStatus.OPEN).count());
+                reportData.put("closed",    allJobs.stream().filter(j -> j.getStatus() == JobPosting.JobStatus.CLOSED).count());
+                reportData.put("archived",  allJobs.stream().filter(j -> j.getStatus() == JobPosting.JobStatus.ARCHIVED).count());
+
+                List<Map<String, Object>> records = allJobs.stream().map(j -> {
+                    Map<String, Object> r = new LinkedHashMap<>();
+                    r.put("title",           j.getJobTitle());
+                    r.put("employer",        j.getEmployer().getUser().getName());
+                    r.put("companyName",     j.getEmployer().getCompanyName());
+                    r.put("companyEmail",    j.getEmployer().getUser().getEmail());
+                    r.put("companyLocation", j.getEmployer().getCompanyLocation());
+                    r.put("status",          j.getStatus().name());
+                    r.put("location",        j.getLocation());
+                    r.put("shift",           j.getShift());
+                    r.put("experienceYears", j.getExperienceYears());
+                    r.put("requiredSkills",  j.getRequiredSkills());
+                    return r;
+                }).toList();
+                reportData.put("records", records);
             }
             case "ratings" -> {
-                List<User> all = userRepository.findAll();
-                double avg = all.stream()
-                        .filter(u -> u.getTotalRatings() > 0)
-                        .mapToDouble(User::getAverageRating)
-                        .average().orElse(0.0);
+                List<User> rated = userRepository.findAll().stream()
+                        .filter(u -> u.isEmailVerified() && u.getRole() != Role.ADMIN && u.getTotalRatings() > 0)
+                        .sorted(Comparator.comparingDouble(User::getAverageRating).reversed())
+                        .toList();
+                double avg = rated.stream().mapToDouble(User::getAverageRating).average().orElse(0.0);
                 reportData.put("platformAverageRating", Math.round(avg * 100.0) / 100.0);
-                reportData.put("totalReviews",          reviewRepository.count());
-                reportData.put("usersWithRatings",      all.stream().filter(u -> u.getTotalRatings() > 0).count());
+                reportData.put("totalReviews",   reviewRepository.count());
+                reportData.put("usersWithRatings", rated.size());
+
+                List<Map<String, Object>> candidateRecords = rated.stream()
+                        .filter(u -> u.getRole() == Role.CANDIDATE)
+                        .map(u -> {
+                            Map<String, Object> r = new LinkedHashMap<>();
+                            r.put("name",          u.getName());
+                            r.put("email",         u.getEmail());
+                            r.put("averageRating", u.getAverageRating());
+                            r.put("totalRatings",  u.getTotalRatings());
+                            candidateRepository.findByUserId(u.getId()).ifPresent(c -> {
+                                r.put("location", c.getPreferredLocation());
+                                r.put("shift",    c.getPreferredShift());
+                                r.put("workType", c.getWorkType());
+                            });
+                            return r;
+                        }).toList();
+                reportData.put("candidateRecords", candidateRecords);
+
+                List<Map<String, Object>> employerRecords = rated.stream()
+                        .filter(u -> u.getRole() == Role.EMPLOYER)
+                        .map(u -> {
+                            Map<String, Object> r = new LinkedHashMap<>();
+                            r.put("name",          u.getName());
+                            r.put("email",         u.getEmail());
+                            r.put("averageRating", u.getAverageRating());
+                            r.put("totalRatings",  u.getTotalRatings());
+                            employerRepository.findByUserId(u.getId()).ifPresent(e -> {
+                                r.put("companyName",     e.getCompanyName());
+                                r.put("companyLocation", e.getCompanyLocation());
+                            });
+                            return r;
+                        }).toList();
+                reportData.put("employerRecords", employerRecords);
             }
             case "analytics" -> {
-                reportData.put("totalInterviews",   slotRepository.count());
-                reportData.put("totalJobPostings",  jobPostingRepository.count());
-                reportData.put("totalCandidates",   userRepository.findByRole(Role.CANDIDATE).size());
-                reportData.put("totalEmployers",    userRepository.findByRole(Role.EMPLOYER).size());
+                reportData.put("totalInterviews",  slotRepository.count());
+                reportData.put("totalJobPostings", jobPostingRepository.count());
+                reportData.put("totalCandidates",  userRepository.findByRole(Role.CANDIDATE).size());
+                reportData.put("totalEmployers",   userRepository.findByRole(Role.EMPLOYER).size());
+                reportData.put("totalReviews",     reviewRepository.count());
             }
-            default -> throw new IllegalArgumentException(
-                    "Invalid filter. Please enter valid criteria.");
+            default -> throw new IllegalArgumentException("Invalid filter. Please enter valid criteria.");
         }
 
-        // Persist GraphicalReport (ACD: Admin Views GraphicalReport 1:0..*)
         User admin = userRepository.findByEmail(adminEmail).orElse(null);
         String json;
         try {
@@ -252,18 +371,114 @@ public class AdminService {
         return reportData;
     }
 
-    // UC-14 steps 13-14: Export report as CSV download
-    public String exportReportCsv(String category, String from, String to, String adminEmail) {
-        Map<String, Object> data = generateReport(category, from, to, null, adminEmail);
+    @SuppressWarnings("unchecked")
+    public String exportReportCsv(String category, String from, String to, String userType, String adminEmail) {
+        Map<String, Object> data = generateReport(category, from, to, userType, adminEmail);
         StringBuilder csv = new StringBuilder();
-        csv.append("key,value\n");
-        for (Map.Entry<String, Object> entry : data.entrySet()) {
-            csv.append(entry.getKey()).append(',').append(entry.getValue()).append('\n');
+        boolean wrote = false;
+
+        for (String key : new String[]{"candidateRecords", "employerRecords"}) {
+            Object obj = data.get(key);
+            if (obj instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Map) {
+                List<Map<String, Object>> rows = (List<Map<String, Object>>) list;
+                if (wrote) csv.append('\n');
+                csv.append(key.equals("candidateRecords") ? "CANDIDATES\n" : "EMPLOYERS\n");
+                csv.append(String.join(",", rows.get(0).keySet())).append('\n');
+                for (Map<String, Object> row : rows) {
+                    csv.append(row.values().stream()
+                            .map(v -> v == null ? "" : v.toString().replace(",", ";"))
+                            .reduce("", (a, b) -> a.isEmpty() ? b : a + "," + b))
+                       .append('\n');
+                }
+                wrote = true;
+            }
+        }
+
+        if (!wrote) {
+            Object recordsObj = data.get("records");
+            if (recordsObj instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Map) {
+                List<Map<String, Object>> records = (List<Map<String, Object>>) list;
+                csv.append(String.join(",", records.get(0).keySet())).append('\n');
+                for (Map<String, Object> row : records) {
+                    csv.append(row.values().stream()
+                            .map(v -> v == null ? "" : v.toString().replace(",", ";"))
+                            .reduce("", (a, b) -> a.isEmpty() ? b : a + "," + b))
+                       .append('\n');
+                }
+            } else {
+                csv.append("key,value\n");
+                for (Map.Entry<String, Object> entry : data.entrySet()) {
+                    if (!(entry.getValue() instanceof List)) {
+                        csv.append(entry.getKey()).append(',').append(entry.getValue()).append('\n');
+                    }
+                }
+            }
         }
         return csv.toString();
     }
 
-    // UC-14: list previously generated reports
+    public List<Map<String, Object>> getUserInterviews(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        if (user.getRole() == Role.CANDIDATE) {
+            var candidate = candidateRepository.findByUserId(userId).orElse(null);
+            if (candidate == null) return result;
+            slotRepository.findByCandidate(candidate).stream()
+                    .sorted((a, b) -> b.getStartTime().compareTo(a.getStartTime()))
+                    .forEach(slot -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("id",           slot.getId());
+                        m.put("jobTitle",     slot.getJobPosting().getJobTitle());
+                        m.put("companyName",  slot.getJobPosting().getEmployer().getCompanyName());
+                        m.put("startTime",    slot.getStartTime().toString());
+                        m.put("endTime",      slot.getEndTime().toString());
+                        m.put("status",       slot.getStatus().name());
+                        m.put("calendlyLink", slot.getCalendlyLink());
+                        result.add(m);
+                    });
+        } else if (user.getRole() == Role.EMPLOYER) {
+            var employer = employerRepository.findByUserId(userId).orElse(null);
+            if (employer == null) return result;
+            slotRepository.findByWindow_Employer(employer).stream()
+                    .sorted((a, b) -> b.getStartTime().compareTo(a.getStartTime()))
+                    .forEach(slot -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("id",             slot.getId());
+                        m.put("candidateName",  slot.getCandidate().getUser().getName());
+                        m.put("candidateEmail", slot.getCandidate().getUser().getEmail());
+                        m.put("jobTitle",       slot.getJobPosting().getJobTitle());
+                        m.put("startTime",      slot.getStartTime().toString());
+                        m.put("endTime",        slot.getEndTime().toString());
+                        m.put("status",         slot.getStatus().name());
+                        m.put("calendlyLink",   slot.getCalendlyLink());
+                        result.add(m);
+                    });
+        }
+        return result;
+    }
+
+    public List<Map<String, Object>> getUserReviews(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        var reviews = reviewRepository.findByRatee(user);
+        reviews.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+
+        return reviews.stream().map(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id",          r.getId());
+            m.put("raterName",   r.getRater().getName());
+            m.put("raterRole",   r.getRater().getRole().name());
+            m.put("ratingValue", r.getRatingValue());
+            m.put("comment",     r.getComment());
+            m.put("createdAt",   r.getCreatedAt().toString());
+            return m;
+        }).toList();
+    }
+
     public List<Map<String, Object>> getReportHistory() {
         return graphicalReportRepository.findAllByOrderByGeneratedAtDesc().stream().map(r -> {
             Map<String, Object> m = new LinkedHashMap<>();
