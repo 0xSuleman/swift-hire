@@ -17,6 +17,7 @@ ChartJS.register(
 )
 
 const darkGrid = {
+  maintainAspectRatio: false,
   plugins: { legend: { labels: { color: '#9CA3AF', font: { size: 12 } } } },
   scales: {
     x: { ticks: { color: '#6B7280' }, grid: { color: '#1F2937' } },
@@ -187,24 +188,25 @@ export default function CandidateAnalytics() {
           <div className="app-card">
             <p style={{ margin: '0 0 12px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Interview Status</p>
             {hasInterviews
-              ? <Doughnut data={statusDoughnut} options={{ plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } }, cutout: '60%' }} />
+              ? <div style={{ position: 'relative', height: '240px' }}><Doughnut data={statusDoughnut} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } }, cutout: '60%' }} /></div>
               : <p style={{ color: '#4B5563', fontSize: '0.8rem', textAlign: 'center', paddingTop: 40 }}>No interviews yet.</p>}
           </div>
           <div className="app-card">
             <p style={{ margin: '0 0 12px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Interview Outcomes</p>
             {hasInterviews
               ? <>
-                  <Doughnut data={outcomeDoughnut} options={{ plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } }, cutout: '60%' }} />
+                  <div style={{ position: 'relative', height: '240px' }}><Doughnut data={outcomeDoughnut} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } }, cutout: '60%' }} /></div>
                   <p style={{ textAlign: 'center', marginTop: 10, fontSize: '1.2rem', fontWeight: 700, color: '#818CF8' }}>{completedCount} completed</p>
                 </>
               : <p style={{ color: '#4B5563', fontSize: '0.8rem', textAlign: 'center', paddingTop: 40 }}>No interviews yet.</p>}
           </div>
           <div className="app-card">
             <p style={{ margin: '0 0 12px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Profile Strength</p>
-            <Radar data={radarData} options={{
+            <div style={{ position: 'relative', height: '240px' }}><Radar data={radarData} options={{
+              maintainAspectRatio: false,
               plugins: { legend: { display: false } },
               scales: { r: { ticks: { display: false }, grid: { color: '#1F2937' }, pointLabels: { color: '#9CA3AF', font: { size: 10 } }, min: 0, max: 100 } },
-            }} />
+            }} /></div>
           </div>
         </div>
 
@@ -213,19 +215,19 @@ export default function CandidateAnalytics() {
           <div className="two-col-grid">
             <div className="app-card">
               <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>ATS Score per Job</p>
-              <Bar data={atsBar} options={{ ...darkGrid, responsive: true }} />
+              <div style={{ position: 'relative', height: '280px' }}><Bar data={atsBar} options={{ ...darkGrid }} /></div>
             </div>
             <div className="app-card">
               <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Job Match Ranking</p>
-              <Bar data={atsBarH} options={{
+              <div style={{ position: 'relative', height: '280px' }}><Bar data={atsBarH} options={{
+                maintainAspectRatio: false,
                 indexAxis: 'y',
                 plugins: { legend: { display: false } },
                 scales: {
                   x: { ticks: { color: '#6B7280' }, grid: { color: '#1F2937' }, beginAtZero: true, max: 100 },
                   y: { ticks: { color: '#6B7280' }, grid: { color: '#1F2937' } },
                 },
-                responsive: true,
-              }} />
+              }} /></div>
             </div>
           </div>
         )}
@@ -236,14 +238,14 @@ export default function CandidateAnalytics() {
             <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>
               Ratings Received (1★ – 5★)
             </p>
-            <Bar data={ratingsBar} options={{
+            <div style={{ position: 'relative', height: '280px' }}><Bar data={ratingsBar} options={{
+              maintainAspectRatio: false,
               plugins: { legend: { display: false } },
               scales: {
                 x: { ticks: { color: '#6B7280' }, grid: { color: '#1F2937' } },
                 y: { ticks: { color: '#6B7280', stepSize: 1 }, grid: { color: '#1F2937' }, beginAtZero: true },
               },
-              responsive: true,
-            }} />
+            }} /></div>
           </div>
         )}
 

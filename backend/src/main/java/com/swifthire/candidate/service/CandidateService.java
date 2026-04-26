@@ -3,6 +3,7 @@ package com.swifthire.candidate.service;
 import com.swifthire.common.exception.ResourceNotFoundException;
 import com.swifthire.job.model.JobPosting;
 import com.swifthire.job.repository.JobPostingRepository;
+import com.swifthire.job.repository.MatchScoreRepository;
 import com.swifthire.job.service.AtsScoreService;
 import com.swifthire.user.model.Candidate;
 import com.swifthire.user.repository.CandidateRepository;
@@ -27,6 +28,7 @@ public class CandidateService {
     private final UserRepository userRepository;
     private final CvParserService cvParserService;
     private final JobPostingRepository jobPostingRepository;
+    private final MatchScoreRepository matchScoreRepository;
     private final AtsScoreService atsScoreService;
 
     @Value("${app.cv.upload-dir}")
@@ -87,6 +89,7 @@ public class CandidateService {
         String skills = cvParserService.parseSkills(rawText);
         candidate.setParsedSkills(skills);
         candidateRepository.save(candidate);
+        matchScoreRepository.deleteByCandidate(candidate);
     }
 
     @Transactional
