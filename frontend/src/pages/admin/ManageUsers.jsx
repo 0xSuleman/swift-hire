@@ -338,6 +338,26 @@ export default function ManageUsers() {
     }
   }
 
+  const searchWith = async (patch) => {
+    const merged = { ...filter, ...patch }
+    setFilter(merged)
+    setLoading(true)
+    try {
+      const params = {}
+      if (merged.role)      params.role = merged.role
+      if (merged.maxRating) params.maxRating = merged.maxRating
+      if (merged.status)    params.status = merged.status
+      if (merged.search)    params.search = merged.search
+      const res = await adminApi.getUsers(params)
+      setUsers(res.data.data)
+    } catch (err) {
+      notify(err.response?.data?.message || 'Search failed.', 'err')
+      setUsers([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const updateStatus = async (userId, action) => {
     setConfirmBlockId(null)
     setConfirmDeactivateId(null)
@@ -431,14 +451,14 @@ export default function ManageUsers() {
               style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#9CA3AF', padding: '7px 12px 7px 28px', fontSize: '0.82rem', outline: 'none', width: 170 }} />
           </div>
 
-          <select value={filter.role} onChange={e => setFilter(f => ({ ...f, role: e.target.value }))}
+          <select value={filter.role} onChange={e => searchWith({ role: e.target.value })}
             style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#9CA3AF', padding: '7px 12px', fontSize: '0.82rem', outline: 'none' }}>
             <option value="">All Roles</option>
             <option value="CANDIDATE">Candidate</option>
             <option value="EMPLOYER">Employer</option>
           </select>
 
-          <select value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))}
+          <select value={filter.status} onChange={e => searchWith({ status: e.target.value })}
             style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#9CA3AF', padding: '7px 12px', fontSize: '0.82rem', outline: 'none' }}>
             <option value="">All Statuses</option>
             <option value="ACTIVE">Active</option>
@@ -451,6 +471,7 @@ export default function ManageUsers() {
             <input type="number" min="0" max="5" step="0.1" placeholder="Max rating"
               value={filter.maxRating}
               onChange={e => setFilter(f => ({ ...f, maxRating: e.target.value }))}
+              onBlur={e => searchWith({ maxRating: e.target.value })}
               style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#9CA3AF', padding: '7px 12px 7px 28px', fontSize: '0.82rem', outline: 'none', width: 130 }} />
           </div>
 

@@ -136,7 +136,8 @@ public class AdminService {
         };
 
         if (user.getAccountStatus() == newStatus) {
-            throw new IllegalArgumentException("Action already active.");
+            throw new IllegalArgumentException(
+                "User is already " + newStatus.name().toLowerCase() + ".");
         }
 
         user.setAccountStatus(newStatus);

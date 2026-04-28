@@ -4,6 +4,7 @@ import com.swifthire.scheduling.model.InterviewSlot;
 import com.swifthire.user.model.Candidate;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,6 +33,9 @@ public interface InterviewSlotRepository extends JpaRepository<InterviewSlot, Lo
 
     List<InterviewSlot> findByJobPostingId(Long jobPostingId);
     List<InterviewSlot> findByWindow_Employer(com.swifthire.user.model.Employer employer);
+
+    @Query("SELECT s FROM InterviewSlot s WHERE s.jobPosting.id IN :jobIds")
+    List<InterviewSlot> findByJobPostingIdIn(@Param("jobIds") List<Long> jobIds);
 
     // Auto-completion cron: find slots whose end time has passed, still in active status
     List<InterviewSlot> findByEndTimeBeforeAndStatusIn(LocalDateTime endTime, List<InterviewSlot.SlotStatus> statuses);

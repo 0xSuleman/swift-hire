@@ -63,9 +63,12 @@ public class CandidateService {
     public void updateProfile(String email, Map<String, String> updates) {
         var user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
-        if (updates.containsKey("name"))    user.setName(updates.get("name"));
-        if (updates.containsKey("phoneNo")) user.setPhoneNo(updates.get("phoneNo"));
-        if (updates.containsKey("address")) user.setAddress(updates.get("address"));
+        if (updates.containsKey("name") && updates.get("name") != null && !updates.get("name").isBlank())
+            user.setName(updates.get("name").trim());
+        if (updates.containsKey("phoneNo") && updates.get("phoneNo") != null)
+            user.setPhoneNo(updates.get("phoneNo").trim());
+        if (updates.containsKey("address") && updates.get("address") != null)
+            user.setAddress(updates.get("address").trim());
         userRepository.save(user);
     }
 
