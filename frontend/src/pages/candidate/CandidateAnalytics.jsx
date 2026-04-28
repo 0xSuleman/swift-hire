@@ -236,7 +236,7 @@ export default function CandidateAnalytics() {
           <div className="two-col-grid">
             <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(129,140,248,0.08))' }}>
               <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>ATS Score per Job</p>
-              <div style={{ position: 'relative', height: '280px' }}><Line data={atsLine} options={{ ...darkGrid }} /></div>
+              <div style={{ position: 'relative', height: '280px' }}><Line data={atsLine} options={{ ...darkGrid, scales: { ...darkGrid.scales, y: { ...darkGrid.scales.y, max: 105 } } }} /></div>
             </div>
             <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(46,229,176,0.07))' }}>
               <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Job Match Ranking</p>

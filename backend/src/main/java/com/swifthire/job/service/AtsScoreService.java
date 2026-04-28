@@ -30,13 +30,17 @@ public class AtsScoreService {
 
         List<Candidate> allCandidates = candidateRepository.findAll();
 
-        // Score each candidate — exclude hired candidates from the active pool
+        // Score each candidate — exclude hired candidates from the active pool.
+        // Shift and location are hard filters when specified by the job (non-negotiable constraints).
         List<MatchScore> scores = allCandidates.stream()
                 .filter(c -> c.getHiredAt() == null)
                 .filter(c -> c.getParsedSkills() != null && !c.getParsedSkills().isBlank())
+                .filter(c -> jobPosting.getShift() == null ||
+                             jobPosting.getShift().equalsIgnoreCase(c.getPreferredShift()))
+                .filter(c -> jobPosting.getLocation() == null ||
+                             jobPosting.getLocation().equalsIgnoreCase(c.getPreferredLocation()))
                 .map(candidate -> {
                     double pct = calculateMatch(parseTags(candidate.getParsedSkills()), requiredTags);
-                    if (pct > 0) pct += preferenceBonus(candidate, jobPosting);
                     return MatchScore.builder()
                             .candidate(candidate)
                             .jobPosting(jobPosting)
