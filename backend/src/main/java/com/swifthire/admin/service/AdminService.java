@@ -533,6 +533,56 @@ public class AdminService {
         return events;
     }
 
+    public Map<String, Object> getAdminAnalytics() {
+        Map<String, Object> m = new LinkedHashMap<>();
+
+        List<User> allUsers = userRepository.findAll().stream()
+                .filter(u -> u.isEmailVerified() && u.getRole() != Role.ADMIN).toList();
+        long totalCandidates = allUsers.stream().filter(u -> u.getRole() == Role.CANDIDATE).count();
+        long totalEmployers  = allUsers.stream().filter(u -> u.getRole() == Role.EMPLOYER).count();
+        m.put("totalUsers",       (long) allUsers.size());
+        m.put("totalCandidates",  totalCandidates);
+        m.put("totalEmployers",   totalEmployers);
+        m.put("activeUsers",      allUsers.stream().filter(u -> u.getAccountStatus() == AccountStatus.ACTIVE).count());
+        m.put("bannedUsers",      allUsers.stream().filter(u -> u.getAccountStatus() == AccountStatus.BANNED).count());
+        m.put("deactivatedUsers", allUsers.stream().filter(u -> u.getAccountStatus() == AccountStatus.DEACTIVATED).count());
+
+        List<JobPosting> allJobs = jobPostingRepository.findAll();
+        m.put("totalJobs",    (long) allJobs.size());
+        m.put("openJobs",     allJobs.stream().filter(j -> j.getStatus() == JobPosting.JobStatus.OPEN).count());
+        m.put("closedJobs",   allJobs.stream().filter(j -> j.getStatus() == JobPosting.JobStatus.CLOSED).count());
+        m.put("archivedJobs", allJobs.stream().filter(j -> j.getStatus() == JobPosting.JobStatus.ARCHIVED).count());
+
+        long totalInterviews = slotRepository.count();
+        long totalReviews    = reviewRepository.count();
+        long hiredCandidates = candidateRepository.findAll().stream().filter(c -> c.getHiredAt() != null).count();
+        m.put("totalInterviews", totalInterviews);
+        m.put("totalReviews",    totalReviews);
+        m.put("hiredCandidates", hiredCandidates);
+
+        double avgRating = allUsers.stream()
+                .filter(u -> u.getTotalRatings() > 0)
+                .mapToDouble(User::getAverageRating).average().orElse(0.0);
+        m.put("platformAverageRating", Math.round(avgRating * 100.0) / 100.0);
+
+        List<Map<String, Object>> topEmployers = employerRepository.findAll().stream()
+                .map(e -> {
+                    Map<String, Object> em = new LinkedHashMap<>();
+                    String label = (e.getCompanyName() != null && !e.getCompanyName().isBlank())
+                            ? e.getCompanyName() : e.getUser().getName();
+                    em.put("label",    label);
+                    em.put("jobCount", (long) jobPostingRepository.findByEmployer(e).size());
+                    return em;
+                })
+                .filter(em -> (long) em.get("jobCount") > 0)
+                .sorted(Comparator.comparingLong(em -> -(long) em.get("jobCount")))
+                .limit(8)
+                .toList();
+        m.put("topEmployers", topEmployers);
+
+        return m;
+    }
+
     public List<Map<String, Object>> getReportHistory() {
         return graphicalReportRepository.findAllByOrderByGeneratedAtDesc().stream().map(r -> {
             Map<String, Object> m = new LinkedHashMap<>();

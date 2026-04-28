@@ -60,4 +60,18 @@ public class JobController {
         jobService.archiveJobPosting(userDetails.getUsername(), jobId);
         return ResponseEntity.ok(ApiResponse.ok("Job posting archived.", null));
     }
+
+    // Close a job posting (OPEN → CLOSED)
+    @PatchMapping("/{jobId}/status")
+    public ResponseEntity<ApiResponse<Void>> updateJobStatus(
+            @PathVariable Long jobId,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String status = body.getOrDefault("status", "").toUpperCase();
+        if ("CLOSED".equals(status)) {
+            jobService.closeJobPosting(userDetails.getUsername(), jobId);
+            return ResponseEntity.ok(ApiResponse.ok("Job closed.", null));
+        }
+        return ResponseEntity.badRequest().body(ApiResponse.error("Unsupported status."));
+    }
 }

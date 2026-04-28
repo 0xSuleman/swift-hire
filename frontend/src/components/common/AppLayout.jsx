@@ -17,6 +17,7 @@ const NAV = {
   EMPLOYER: [
     { to: '/employer',               label: 'Dashboard',    Icon: LayoutDashboard },
     { to: '/employer/prompt',        label: 'Hire Now',     Icon: Zap },
+    { to: '/employer/jobs',          label: 'My Jobs',      Icon: Briefcase },
     { to: '/employer/interviews',    label: 'Interviews',   Icon: CalendarDays },
     { to: '/employer/profile',       label: 'Company',      Icon: Building2 },
     { to: '/employer/analytics',     label: 'Analytics',    Icon: BarChart2 },
@@ -25,6 +26,7 @@ const NAV = {
     { to: '/admin',               label: 'Dashboard',    Icon: LayoutDashboard },
     { to: '/admin/users',         label: 'Manage Users', Icon: Users },
     { to: '/admin/reports',       label: 'Reports',      Icon: FileText },
+    { to: '/admin/analytics',     label: 'Analytics',    Icon: BarChart2 },
   ],
 }
 

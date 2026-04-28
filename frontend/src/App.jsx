@@ -25,11 +25,13 @@ import AutoSchedule from './pages/employer/AutoSchedule'
 import RateCandidate from './pages/employer/RateCandidate'
 import EmployerProfile from './pages/employer/EmployerProfile'
 import EmployerAnalytics from './pages/employer/EmployerAnalytics'
+import MyJobs from './pages/employer/MyJobs'
 
 // Admin
 import AdminDashboard from './pages/admin/AdminDashboard'
 import ManageUsers from './pages/admin/ManageUsers'
 import SystemReports from './pages/admin/SystemReports'
+import AdminAnalytics from './pages/admin/AdminAnalytics'
 
 export default function App() {
   return (
@@ -60,13 +62,15 @@ export default function App() {
         <Route path="/employer/profile"            element={<EmployerProfile />} />
         <Route path="/employer/analytics"          element={<EmployerAnalytics />} />
         <Route path="/employer/interviews"         element={<MyInterviews />} />
+        <Route path="/employer/jobs"               element={<MyJobs />} />
       </Route>
 
       {/* Admin */}
       <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
         <Route path="/admin"          element={<AdminDashboard />} />
         <Route path="/admin/users"    element={<ManageUsers />} />
-        <Route path="/admin/reports"  element={<SystemReports />} />
+        <Route path="/admin/reports"    element={<SystemReports />} />
+        <Route path="/admin/analytics"  element={<AdminAnalytics />} />
       </Route>
 
       {/* Default redirect */}

@@ -120,4 +120,10 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Object>> getReportHistory() {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getReportHistory()));
     }
+
+    // Platform-wide analytics dashboard (no report history persistence)
+    @GetMapping("/analytics")
+    public ResponseEntity<ApiResponse<Object>> getAnalytics() {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getAdminAnalytics()));
+    }
 }
