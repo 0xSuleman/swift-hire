@@ -10,6 +10,7 @@ export const adminApi = {
   deleteAuditLog:    (id)           => api.delete(`/admin/audit-logs/${id}`),
   deleteUser:        (userId)       => api.delete(`/admin/users/${userId}`),
   getReportHistory:  ()             => api.get('/admin/reports/history'),
+  getAnalytics:      ()             => api.get('/admin/analytics'),
   getUserInterviews: (userId)       => api.get(`/admin/users/${userId}/interviews`),
   getUserReviews:    (userId)       => api.get(`/admin/users/${userId}/reviews`),
   getUserActivity:   (userId)       => api.get(`/admin/users/${userId}/activity`),

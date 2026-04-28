@@ -112,4 +112,15 @@ public class JobService {
         job.setStatus(JobPosting.JobStatus.ARCHIVED);
         jobPostingRepository.save(job);
     }
+
+    @Transactional
+    public void closeJobPosting(String email, Long jobId) {
+        JobPosting job = jobPostingRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job posting not found."));
+        if (job.getStatus() != JobPosting.JobStatus.OPEN) {
+            throw new IllegalArgumentException("Only OPEN jobs can be closed.");
+        }
+        job.setStatus(JobPosting.JobStatus.CLOSED);
+        jobPostingRepository.save(job);
+    }
 }

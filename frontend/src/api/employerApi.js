@@ -15,6 +15,7 @@ export const employerApi = {
   getCandidateProfile:  (candidateId)    => api.get(`/employer/candidates/${candidateId}`),
   updateJob:            (jobId, data)    => api.put(`/jobs/${jobId}`, data),
   deleteJob:            (jobId)          => api.delete(`/jobs/${jobId}`),
+  closeJob:             (jobId)          => api.patch(`/jobs/${jobId}/status`, { status: 'CLOSED' }),
   getSlot:              (slotId)         => api.get(`/schedule/slots/${slotId}`),
   hireCandidate:        (candidateId, jobPostingId) => api.post(`/employer/candidates/${candidateId}/hire`, { jobPostingId }),
 }
