@@ -75,7 +75,7 @@ public class AdminService {
                     .toList();
         }
 
-        return users.stream().filter(User::isEmailVerified).map(u -> {
+        return users.stream().filter(User::isEmailVerified).filter(u -> u.getRole() != Role.ADMIN).map(u -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id",            u.getId());
             m.put("name",          u.getName());
@@ -128,6 +128,10 @@ public class AdminService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
+        if (user.getRole() == Role.ADMIN) {
+            throw new IllegalArgumentException("Admin accounts cannot be modified.");
+        }
+
         AccountStatus newStatus = switch (action.toLowerCase()) {
             case "approve" -> AccountStatus.ACTIVE;
             case "block"   -> AccountStatus.BANNED;
@@ -159,6 +163,10 @@ public class AdminService {
     public void deleteUser(Long userId, String adminEmail) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        if (user.getRole() == Role.ADMIN) {
+            throw new IllegalArgumentException("Admin accounts cannot be deleted.");
+        }
 
         reviewRepository.deleteAll(reviewRepository.findByRater(user));
         reviewRepository.deleteAll(reviewRepository.findByRatee(user));
