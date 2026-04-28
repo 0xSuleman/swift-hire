@@ -73,10 +73,9 @@ public class PromptEngineService {
         }
 
         public String requiredSkillsTag() {
-            Set<String> all = new HashSet<>(skills);
-            all.addAll(locations);
-            all.addAll(shifts);
-            return String.join(",", all).toLowerCase();
+            // Only skills go into the ATS matching tag — location and shift are stored
+            // as separate fields on JobPosting and handled as hard filters in AtsScoreService.
+            return String.join(",", skills).toLowerCase();
         }
 
         public String location() {
