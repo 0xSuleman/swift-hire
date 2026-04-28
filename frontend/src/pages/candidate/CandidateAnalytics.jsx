@@ -8,13 +8,30 @@ import {
   ArcElement, RadialLinearScale, PointElement, LineElement,
   Tooltip, Legend, Filler,
 } from 'chart.js'
-import { Bar, Doughnut, Radar } from 'react-chartjs-2'
+import { Bar, Doughnut, Radar, Line } from 'react-chartjs-2'
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement,
   ArcElement, RadialLinearScale, PointElement, LineElement,
   Tooltip, Legend, Filler,
 )
+
+const centerLabelPlugin = {
+  id: 'centerLabel',
+  afterDraw(chart) {
+    if (chart.config.type !== 'doughnut') return
+    const { ctx, chartArea: { left, top, width, height } } = chart
+    const total = chart.data.datasets[0].data.reduce((a, b) => Number(a) + Number(b), 0)
+    if (!total) return
+    ctx.save()
+    ctx.font = 'bold 22px sans-serif'
+    ctx.fillStyle = '#E8EAF0'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(total, left + width / 2, top + height / 2)
+    ctx.restore()
+  }
+}
 
 const darkGrid = {
   maintainAspectRatio: false,
@@ -65,20 +82,24 @@ export default function CandidateAnalytics() {
       ],
       backgroundColor: ['#F59E0B40', '#2EE5B040', '#818CF840', '#EF444440'],
       borderColor:     ['#F59E0B',   '#2EE5B0',   '#818CF8',   '#EF4444'],
-      borderWidth: 1,
+      borderWidth: 2,
     }],
   }
 
-  // Chart 2 — Bar: ATS score per job (top matches)
-  const atsBar = {
+  // Chart 2 — Line: ATS score per job (top matches)
+  const atsLine = {
     labels: topMatches.map(m => m.jobTitle.length > 16 ? m.jobTitle.slice(0, 16) + '…' : m.jobTitle),
     datasets: [{
       label: 'ATS Score (%)',
       data: topMatches.map(m => m.atsScore),
-      backgroundColor: '#818CF840',
       borderColor: '#818CF8',
-      borderWidth: 1,
-      borderRadius: 4,
+      backgroundColor: 'rgba(129,140,248,0.12)',
+      borderWidth: 2,
+      tension: 0.4,
+      fill: true,
+      pointRadius: 5,
+      pointBackgroundColor: '#818CF8',
+      pointHoverRadius: 7,
     }],
   }
 
@@ -128,7 +149,7 @@ export default function CandidateAnalytics() {
       data: [completedCount, otherCount],
       backgroundColor: ['#818CF840', '#374151'],
       borderColor:     ['#818CF8',   '#4B5563'],
-      borderWidth: 1,
+      borderWidth: 2,
     }],
   }
 
@@ -170,7 +191,7 @@ export default function CandidateAnalytics() {
       <div className="stat-grid" style={{ marginBottom: 28 }}>
         {stats.map(({ label, value, Icon, color, suffix }) => (
           <div key={label} className="app-card" style={{ textAlign: 'center' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: `0 0 18px ${color}25` }}>
               <Icon size={18} style={{ color }} />
             </div>
             <p style={{ fontSize: '1.6rem', fontWeight: 700, color: '#E8EAF0', margin: '0 0 2px' }}>
@@ -185,22 +206,22 @@ export default function CandidateAnalytics() {
 
         {/* Row 1: interview status doughnut + outcome doughnut + radar */}
         <div className="three-col-grid">
-          <div className="app-card">
+          <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(46,229,176,0.07))' }}>
             <p style={{ margin: '0 0 12px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Interview Status</p>
             {hasInterviews
-              ? <div style={{ position: 'relative', height: '240px' }}><Doughnut data={statusDoughnut} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } }, cutout: '60%' }} /></div>
+              ? <div style={{ position: 'relative', height: '240px' }}><Doughnut data={statusDoughnut} plugins={[centerLabelPlugin]} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } }, cutout: '60%' }} /></div>
               : <p style={{ color: '#4B5563', fontSize: '0.8rem', textAlign: 'center', paddingTop: 40 }}>No interviews yet.</p>}
           </div>
-          <div className="app-card">
+          <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(129,140,248,0.07))' }}>
             <p style={{ margin: '0 0 12px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Interview Outcomes</p>
             {hasInterviews
               ? <>
-                  <div style={{ position: 'relative', height: '240px' }}><Doughnut data={outcomeDoughnut} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } }, cutout: '60%' }} /></div>
+                  <div style={{ position: 'relative', height: '240px' }}><Doughnut data={outcomeDoughnut} plugins={[centerLabelPlugin]} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } }, cutout: '60%' }} /></div>
                   <p style={{ textAlign: 'center', marginTop: 10, fontSize: '1.2rem', fontWeight: 700, color: '#818CF8' }}>{completedCount} completed</p>
                 </>
               : <p style={{ color: '#4B5563', fontSize: '0.8rem', textAlign: 'center', paddingTop: 40 }}>No interviews yet.</p>}
           </div>
-          <div className="app-card">
+          <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(46,229,176,0.07))' }}>
             <p style={{ margin: '0 0 12px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Profile Strength</p>
             <div style={{ position: 'relative', height: '240px' }}><Radar data={radarData} options={{
               maintainAspectRatio: false,
@@ -210,14 +231,14 @@ export default function CandidateAnalytics() {
           </div>
         </div>
 
-        {/* Row 2: ATS bar + ATS horizontal bar */}
+        {/* Row 2: ATS line + ATS horizontal bar */}
         {hasMatches && (
           <div className="two-col-grid">
-            <div className="app-card">
+            <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(129,140,248,0.08))' }}>
               <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>ATS Score per Job</p>
-              <div style={{ position: 'relative', height: '280px' }}><Bar data={atsBar} options={{ ...darkGrid }} /></div>
+              <div style={{ position: 'relative', height: '280px' }}><Line data={atsLine} options={{ ...darkGrid, scales: { ...darkGrid.scales, y: { ...darkGrid.scales.y, max: 105 } } }} /></div>
             </div>
-            <div className="app-card">
+            <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(46,229,176,0.07))' }}>
               <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Job Match Ranking</p>
               <div style={{ position: 'relative', height: '280px' }}><Bar data={atsBarH} options={{
                 maintainAspectRatio: false,
@@ -234,7 +255,7 @@ export default function CandidateAnalytics() {
 
         {/* Row 3: Ratings distribution */}
         {hasRatings && (
-          <div className="app-card">
+          <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(245,158,11,0.07))' }}>
             <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>
               Ratings Received (1★ – 5★)
             </p>

@@ -6,12 +6,31 @@ import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement,
   ArcElement, Tooltip, Legend,
+  PointElement, LineElement, Filler,
 } from 'chart.js'
-import { Bar, Doughnut, Pie } from 'react-chartjs-2'
+import { Bar, Doughnut, Pie, Line } from 'react-chartjs-2'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend, PointElement, LineElement, Filler)
+
+const centerLabelPlugin = {
+  id: 'centerLabel',
+  afterDraw(chart) {
+    if (chart.config.type !== 'doughnut') return
+    const { ctx, chartArea: { left, top, width, height } } = chart
+    const total = chart.data.datasets[0].data.reduce((a, b) => Number(a) + Number(b), 0)
+    if (!total) return
+    ctx.save()
+    ctx.font = 'bold 22px sans-serif'
+    ctx.fillStyle = '#E8EAF0'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(total, left + width / 2, top + height / 2)
+    ctx.restore()
+  }
+}
 
 const darkGrid = {
+  maintainAspectRatio: false,
   plugins: { legend: { labels: { color: '#9CA3AF', font: { size: 12 } } } },
   scales: {
     x: { ticks: { color: '#6B7280' }, grid: { color: '#1F2937' } },
@@ -20,6 +39,7 @@ const darkGrid = {
 }
 
 const darkGridH = {
+  maintainAspectRatio: false,
   indexAxis: 'y',
   plugins: { legend: { labels: { color: '#9CA3AF', font: { size: 12 } } } },
   scales: {
@@ -56,12 +76,12 @@ export default function EmployerAnalytics() {
   const breakdown = data?.jobBreakdown ?? []
   const labels    = breakdown.map(j => j.jobTitle.length > 16 ? j.jobTitle.slice(0, 16) + '…' : j.jobTitle)
 
-  // Chart 1 — Bar: total vs accepted slots per job
-  const slotsBar = {
+  // Chart 1 — Line: total vs accepted slots per job
+  const slotsLine = {
     labels,
     datasets: [
-      { label: 'Total Slots', data: breakdown.map(j => j.totalSlots),    backgroundColor: '#818CF840', borderColor: '#818CF8', borderWidth: 1, borderRadius: 4 },
-      { label: 'Accepted',    data: breakdown.map(j => j.acceptedSlots), backgroundColor: '#2EE5B040', borderColor: '#2EE5B0', borderWidth: 1, borderRadius: 4 },
+      { label: 'Total Slots', data: breakdown.map(j => j.totalSlots),    borderColor: '#818CF8', backgroundColor: 'rgba(129,140,248,0.1)', borderWidth: 2, tension: 0.4, fill: true, pointRadius: 4, pointBackgroundColor: '#818CF8' },
+      { label: 'Accepted',    data: breakdown.map(j => j.acceptedSlots), borderColor: '#2EE5B0', backgroundColor: 'rgba(46,229,176,0.08)',  borderWidth: 2, tension: 0.4, fill: true, pointRadius: 4, pointBackgroundColor: '#2EE5B0' },
     ],
   }
 
@@ -70,7 +90,7 @@ export default function EmployerAnalytics() {
   const remaining = (data?.totalInterviews ?? 0) - accepted
   const acceptDoughnut = {
     labels: ['Accepted', 'Other'],
-    datasets: [{ data: [accepted, remaining], backgroundColor: ['#2EE5B040', '#374151'], borderColor: ['#2EE5B0', '#4B5563'], borderWidth: 1 }],
+    datasets: [{ data: [accepted, remaining], backgroundColor: ['#2EE5B040', '#374151'], borderColor: ['#2EE5B0', '#4B5563'], borderWidth: 2 }],
   }
 
   // Chart 3 — Horizontal Bar: time-to-hire per job
@@ -81,7 +101,7 @@ export default function EmployerAnalytics() {
       data: breakdown.map(j => j.timeToHireDays ?? 0),
       backgroundColor: '#F59E0B40',
       borderColor: '#F59E0B',
-      borderWidth: 1,
+      borderWidth: 2,
       borderRadius: 4,
     }],
   }
@@ -94,7 +114,7 @@ export default function EmployerAnalytics() {
       data: [statusCounts.OPEN ?? 0, statusCounts.CLOSED ?? 0, statusCounts.ARCHIVED ?? 0],
       backgroundColor: ['#2EE5B040', '#818CF840', '#F59E0B40'],
       borderColor:     ['#2EE5B0',   '#818CF8',   '#F59E0B'],
-      borderWidth: 1,
+      borderWidth: 2,
     }],
   }
 
@@ -106,7 +126,7 @@ export default function EmployerAnalytics() {
       data: breakdown.map(j => j.acceptedSlots),
       backgroundColor: '#34D39940',
       borderColor: '#34D399',
-      borderWidth: 1,
+      borderWidth: 2,
       borderRadius: 4,
     }],
   }
@@ -120,7 +140,7 @@ export default function EmployerAnalytics() {
       data: ['1★', '2★', '3★', '4★', '5★'].map(k => ratingsBreakdown[k] ?? 0),
       backgroundColor: ['#EF444430', '#F9731640', '#F59E0B40', '#34D39940', '#2EE5B040'],
       borderColor:     ['#EF4444',   '#F97316',   '#F59E0B',   '#34D399',   '#2EE5B0'],
-      borderWidth: 1,
+      borderWidth: 2,
       borderRadius: 4,
     }],
   }
@@ -146,7 +166,7 @@ export default function EmployerAnalytics() {
       <div className="stat-grid" style={{ marginBottom: 28 }}>
         {stats.map(({ label, value, Icon, color, suffix }) => (
           <div key={label} className="app-card" style={{ textAlign: 'center' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: `0 0 18px ${color}25` }}>
               <Icon size={18} style={{ color }} />
             </div>
             <p style={{ fontSize: '1.6rem', fontWeight: 700, color: '#E8EAF0', margin: '0 0 2px' }}>
@@ -165,51 +185,51 @@ export default function EmployerAnalytics() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* Row 1: slots bar + acceptance doughnut */}
+          {/* Row 1: slots line + acceptance doughnut */}
           <div className="chart-main-side">
-            <div className="app-card">
+            <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(129,140,248,0.08))' }}>
               <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Interview Slots per Job</p>
-              <Bar data={slotsBar} options={{ ...darkGrid, responsive: true }} />
+              <div style={{ position: 'relative', height: '280px' }}><Line data={slotsLine} options={{ ...darkGrid }} /></div>
             </div>
-            <div className="app-card">
+            <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(46,229,176,0.07))' }}>
               <p style={{ margin: '0 0 12px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Acceptance Rate</p>
-              <Doughnut data={acceptDoughnut} options={{ plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } }, cutout: '68%' }} />
+              <div style={{ position: 'relative', height: '220px' }}><Doughnut data={acceptDoughnut} plugins={[centerLabelPlugin]} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } }, cutout: '68%' }} /></div>
               <p style={{ textAlign: 'center', marginTop: 10, fontSize: '1.3rem', fontWeight: 700, color: '#2EE5B0' }}>{data?.acceptanceRate ?? 0}%</p>
             </div>
           </div>
 
           {/* Row 2: time-to-hire horizontal bar */}
-          <div className="app-card">
+          <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(245,158,11,0.07))' }}>
             <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Time to Hire per Job (days)</p>
-            <Bar data={timeBar} options={{ ...darkGridH, responsive: true }} />
+            <div style={{ position: 'relative', height: '260px' }}><Bar data={timeBar} options={{ ...darkGridH }} /></div>
           </div>
 
           {/* Row 3: job status pie + accepted slots bar */}
           <div className="chart-side-main">
-            <div className="app-card">
+            <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(46,229,176,0.07))' }}>
               <p style={{ margin: '0 0 12px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Job Status Distribution</p>
-              <Pie data={statusPie} options={{ plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } } }} />
+              <div style={{ position: 'relative', height: '220px' }}><Pie data={statusPie} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF', font: { size: 11 } } } } }} /></div>
             </div>
-            <div className="app-card">
+            <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(52,211,153,0.07))' }}>
               <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Accepted Slots per Job</p>
-              <Bar data={acceptedBar} options={{ ...darkGrid, responsive: true }} />
+              <div style={{ position: 'relative', height: '260px' }}><Bar data={acceptedBar} options={{ ...darkGrid }} /></div>
             </div>
           </div>
 
           {/* Row 4: Ratings distribution */}
           {hasRatings && (
-            <div className="app-card">
+            <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(245,158,11,0.07))' }}>
               <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>
                 Ratings Received (1★ – 5★)
               </p>
-              <Bar data={ratingsBar} options={{
+              <div style={{ position: 'relative', height: '260px' }}><Bar data={ratingsBar} options={{
+                maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
                   x: { ticks: { color: '#6B7280' }, grid: { color: '#1F2937' } },
                   y: { ticks: { color: '#6B7280', stepSize: 1 }, grid: { color: '#1F2937' }, beginAtZero: true },
                 },
-                responsive: true,
-              }} />
+              }} /></div>
             </div>
           )}
 

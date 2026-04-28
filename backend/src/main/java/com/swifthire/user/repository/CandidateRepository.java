@@ -3,6 +3,7 @@ package com.swifthire.user.repository;
 import com.swifthire.user.model.Candidate;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +18,10 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long> {
 
     @Query("SELECT c FROM Candidate c WHERE " +
            "(:location IS NULL OR LOWER(c.preferredLocation) = LOWER(:location)) AND " +
-           "(:shift IS NULL OR LOWER(c.preferredShift) = LOWER(:shift))")
-    List<Candidate> findByPreferences(String location, String shift);
+           "(:shift IS NULL OR LOWER(c.preferredShift) = LOWER(:shift)) AND " +
+           "(:workType IS NULL OR LOWER(c.workType) = LOWER(:workType))")
+    List<Candidate> findByPreferences(
+        @Param("location") String location,
+        @Param("shift") String shift,
+        @Param("workType") String workType);
 }

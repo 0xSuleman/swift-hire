@@ -56,15 +56,17 @@ public class AnalyticsService {
         // Top job matches by ATS score
         List<Map<String, Object>> topMatches = new ArrayList<>();
         matchScoreRepository.findByCandidateOrderByMatchPercentageDesc(candidate)
-                .stream().limit(6).forEach(ms -> {
+                .stream().limit(10).forEach(ms -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("jobTitle",  ms.getJobPosting().getJobTitle());
                     m.put("atsScore",  ms.getMatchPercentage());
                     topMatches.add(m);
                 });
 
-        int skillsCount = candidate.getParsedSkills() != null
-                ? candidate.getParsedSkills().split(",").length : 0;
+        int skillsCount = (candidate.getParsedSkills() != null && !candidate.getParsedSkills().isBlank())
+                ? (int) java.util.Arrays.stream(candidate.getParsedSkills().split(","))
+                        .filter(s -> !s.isBlank()).count()
+                : 0;
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("profileViews",        candidate.getProfileViews());
@@ -93,8 +95,15 @@ public class AnalyticsService {
 
         List<Map<String, Object>> perJob = new ArrayList<>();
 
+        // Batch load all slots for this employer's jobs in a single query (avoids N+1)
+        List<Long> jobIds = jobs.stream().map(com.swifthire.job.model.JobPosting::getId).toList();
+        Map<Long, List<InterviewSlot>> slotsByJob = jobIds.isEmpty() ? Map.of()
+                : slotRepository.findByJobPostingIdIn(jobIds).stream()
+                        .collect(java.util.stream.Collectors.groupingBy(
+                                s -> s.getJobPosting().getId()));
+
         for (var job : jobs) {
-            List<InterviewSlot> slots = slotRepository.findByJobPostingId(job.getId());
+            List<InterviewSlot> slots = slotsByJob.getOrDefault(job.getId(), List.of());
             long jobTotal     = slots.size();
             long jobAccepted  = slots.stream().filter(s ->
                     s.getStatus() == InterviewSlot.SlotStatus.CONFIRMED ||
@@ -110,13 +119,13 @@ public class AnalyticsService {
                     .map(InterviewSlot::getStartTime)
                     .min(java.time.LocalDateTime::compareTo);
             if (earliest.isPresent()) {
-                timeToHireSum   += Duration.between(job.getCreatedAt(), earliest.get()).toDays();
+                timeToHireSum   += Math.max(0, Duration.between(job.getCreatedAt(), earliest.get()).toDays());
                 timeToHireCount++;
             }
 
             long jobTimeToHire = 0;
             if (earliest.isPresent()) {
-                jobTimeToHire = Duration.between(job.getCreatedAt(), earliest.get()).toDays();
+                jobTimeToHire = Math.max(0, Duration.between(job.getCreatedAt(), earliest.get()).toDays());
             }
 
             Map<String, Object> jobMap = new LinkedHashMap<>();
