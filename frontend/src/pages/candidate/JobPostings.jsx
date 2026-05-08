@@ -91,7 +91,8 @@ export default function JobPostings() {
           {(() => {
             const filtered = jobs.filter(j =>
               j.matchScore >= filters.minScore &&
-              (!filters.location || (j.location ?? '').toLowerCase().includes(filters.location.toLowerCase())) &&
+              (!filters.location || (j.location ?? '').toLowerCase().includes(filters.location.toLowerCase()) ||
+                                    (j.companyLocation ?? '').toLowerCase().includes(filters.location.toLowerCase())) &&
               (!filters.shift || (j.shift ?? '').toLowerCase() === filters.shift.toLowerCase())
             )
             return (
