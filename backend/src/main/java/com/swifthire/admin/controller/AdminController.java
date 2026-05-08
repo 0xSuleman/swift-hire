@@ -11,6 +11,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import com.swifthire.automation.model.NotificationLog;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -125,5 +127,10 @@ public class AdminController {
     @GetMapping("/analytics")
     public ResponseEntity<ApiResponse<Object>> getAnalytics() {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getAdminAnalytics()));
+    }
+
+    @GetMapping("/notification-logs")
+    public ResponseEntity<ApiResponse<List<NotificationLog>>> getNotificationLogs() {
+        return ResponseEntity.ok(ApiResponse.ok("OK", adminService.getNotificationLogs()));
     }
 }

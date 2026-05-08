@@ -3,6 +3,8 @@ package com.swifthire.admin.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swifthire.admin.model.AuditLog;
+import com.swifthire.automation.model.NotificationLog;
+import com.swifthire.automation.repository.NotificationLogRepository;
 import com.swifthire.admin.model.GraphicalReport;
 import com.swifthire.admin.repository.AuditLogRepository;
 import com.swifthire.admin.repository.GraphicalReportRepository;
@@ -45,6 +47,7 @@ public class AdminService {
     private final PasswordResetTokenRepository resetTokenRepository;
     private final GraphicalReportRepository graphicalReportRepository;
     private final AuditLogRepository auditLogRepository;
+    private final NotificationLogRepository notificationLogRepository;
     private final ObjectMapper objectMapper;
 
     public List<Map<String, Object>> getUsers(String role, Double maxRating, String status, String search) {
@@ -177,7 +180,6 @@ public class AdminService {
             slotRepository.deleteAll(slotRepository.findByCandidate(candidate));
             matchScoreRepository.deleteByCandidate(candidate);
             resetTokenRepository.deleteByUserId(userId);
-            auditLogRepository.deleteAll(auditLogRepository.findByTargetUserId(userId));
             candidateRepository.delete(candidate);
 
         } else if (user.getRole() == Role.EMPLOYER) {
@@ -191,7 +193,6 @@ public class AdminService {
             jobPostingRepository.deleteAll(jobs);
             windowRepository.deleteAll(windowRepository.findByEmployer(employer));
             resetTokenRepository.deleteByUserId(userId);
-            auditLogRepository.deleteAll(auditLogRepository.findByTargetUserId(userId));
             employerRepository.delete(employer);
         }
 
@@ -602,5 +603,9 @@ public class AdminService {
             m.put("data",          r.getData());
             return m;
         }).toList();
+    }
+
+    public List<NotificationLog> getNotificationLogs() {
+        return notificationLogRepository.findAllByOrderBySentAtDesc();
     }
 }

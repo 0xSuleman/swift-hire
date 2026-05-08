@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { employerApi } from '../../api/employerApi'
 import AppLayout from '../../components/common/AppLayout'
-import { Building2, MapPin, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { Building2, MapPin, FileText, CheckCircle2, AlertCircle, Loader2, Star } from 'lucide-react'
 
 function Toast({ msg, type }) {
   if (!msg) return null
@@ -23,6 +23,7 @@ function Toast({ msg, type }) {
 
 export default function EmployerProfile() {
   const [form, setForm]     = useState({ companyName: '', companyDetails: '', companyLocation: '' })
+  const [averageRating, setAverageRating] = useState(null)
   const [toast, setToast]   = useState({ msg: '', type: 'ok' })
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
@@ -37,6 +38,7 @@ export default function EmployerProfile() {
       .then(res => {
         const d = res.data.data
         setForm({ companyName: d.companyName || '', companyDetails: d.companyDetails || '', companyLocation: d.companyLocation || '' })
+        setAverageRating(res.data.data.averageRating ?? null)
       })
       .catch(() => notify('Failed to load profile.', 'err'))
       .finally(() => setFetching(false))
@@ -123,6 +125,14 @@ export default function EmployerProfile() {
                 onFocus={e => e.target.style.borderColor = 'rgba(46,229,176,0.4)'}
                 onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
               />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', marginBottom: 8 }}>
+              <Star size={15} style={{ color: '#F59E0B' }} />
+              <span style={{ color: '#E8EAF0', fontWeight: 600, fontSize: '1rem' }}>
+                {averageRating != null ? Number(averageRating).toFixed(1) : '—'}
+              </span>
+              <span style={{ color: '#6B7280', fontSize: '0.8rem' }}>/ 5 average rating</span>
             </div>
 
             <button type="submit" className="btn-teal" disabled={loading}>

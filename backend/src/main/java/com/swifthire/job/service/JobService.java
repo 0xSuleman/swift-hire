@@ -5,7 +5,10 @@ import com.swifthire.job.model.JobPosting;
 import com.swifthire.job.model.MatchScore;
 import com.swifthire.job.repository.JobPostingRepository;
 import com.swifthire.job.repository.MatchScoreRepository;
+import com.swifthire.scheduling.model.InterviewSlot;
+import com.swifthire.scheduling.repository.InterviewSlotRepository;
 import com.swifthire.user.model.Candidate;
+import com.swifthire.user.model.Employer;
 import com.swifthire.user.repository.CandidateRepository;
 import com.swifthire.user.repository.EmployerRepository;
 import com.swifthire.user.repository.UserRepository;
@@ -13,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +32,7 @@ public class JobService {
     private final CandidateRepository candidateRepository;
     private final PromptEngineService promptEngineService;
     private final AtsScoreService atsScoreService;
+    private final InterviewSlotRepository slotRepository;
 
     @Transactional
     public Map<String, Object> processHiringPrompt(String email, String rawPrompt) {
@@ -53,9 +58,13 @@ public class JobService {
         List<MatchScore> scores = atsScoreService.scoreAndRank(job);
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("jobPostingId", job.getId());
-        result.put("jobTitle", job.getJobTitle());
-        result.put("candidatesFound", scores.size());
+        result.put("jobPostingId",      job.getId());
+        result.put("jobTitle",          job.getJobTitle());
+        result.put("candidatesFound",   scores.size());
+        result.put("parsedSkills",      parsed.skills());
+        result.put("parsedLocation",    parsed.location());
+        result.put("parsedShift",       parsed.shift());
+        result.put("parsedExperience",  parsed.experienceYears());
         return result;
     }
 
@@ -74,7 +83,10 @@ public class JobService {
             m.put("skills",        c.getParsedSkills());
             m.put("matchScore",    ms.getMatchPercentage());
             m.put("ranking",       ms.getRanking());
-            m.put("averageRating", c.getUser().getAverageRating());
+            m.put("averageRating",   c.getUser().getAverageRating());
+            m.put("skillMatchPct",   ms.getSkillMatchPct());
+            m.put("locationMatched", ms.isLocationMatched());
+            m.put("shiftMatched",    ms.isShiftMatched());
             return m;
         }).toList();
     }
@@ -122,5 +134,51 @@ public class JobService {
         }
         job.setStatus(JobPosting.JobStatus.CLOSED);
         jobPostingRepository.save(job);
+    }
+
+    // UC-03 extended: Returns all matched candidates for a job with derived application status
+    public List<Map<String, Object>> getCandidateApplicationStatuses(String email, Long jobId) {
+        var user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+        Employer employer = employerRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Employer not found."));
+        JobPosting job = jobPostingRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found."));
+        if (!job.getEmployer().getId().equals(employer.getId())) {
+            throw new IllegalArgumentException("Access denied.");
+        }
+
+        List<MatchScore> scores = matchScoreRepository.findByJobPostingIdOrderByRankingAsc(jobId);
+        List<InterviewSlot> jobSlots = slotRepository.findByJobPostingId(jobId);
+
+        return scores.stream().map(ms -> {
+            Candidate c = ms.getCandidate();
+            InterviewSlot slot = jobSlots.stream()
+                    .filter(s -> s.getCandidate().getId().equals(c.getId()))
+                    .max(Comparator.comparing(s -> s.getStatus().ordinal()))
+                    .orElse(null);
+
+            String status = deriveApplicationStatus(c, slot);
+
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("candidateId",  c.getId());
+            m.put("name",         c.getUser().getName());
+            m.put("matchScore",   ms.getMatchPercentage());
+            m.put("ranking",      ms.getRanking());
+            m.put("status",       status);
+            m.put("interviewDate", slot != null ? slot.getStartTime().toString() : null);
+            return m;
+        }).toList();
+    }
+
+    private String deriveApplicationStatus(Candidate candidate, InterviewSlot slot) {
+        if (candidate.getHiredAt() != null) return "HIRED";
+        if (slot == null) return "RECOMMENDED";
+        return switch (slot.getStatus()) {
+            case COMPLETED -> "COMPLETED";
+            case CONFIRMED -> "CONFIRMED";
+            case PENDING   -> "SCHEDULED";
+            default        -> "RECOMMENDED";
+        };
     }
 }

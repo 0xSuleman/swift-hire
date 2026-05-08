@@ -20,6 +20,7 @@ export default function JobPostings() {
   const [jobs, setJobs]       = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
+  const [filters, setFilters] = useState({ minScore: 0, location: '', shift: '' })
 
   const load = () => {
     setLoading(true)
@@ -87,7 +88,58 @@ export default function JobPostings() {
       {/* Job list */}
       {!loading && !error && jobs.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {jobs.map((job, i) => (
+          {(() => {
+            const filtered = jobs.filter(j =>
+              j.matchScore >= filters.minScore &&
+              (!filters.location || (j.location ?? '').toLowerCase().includes(filters.location.toLowerCase())) &&
+              (!filters.shift || (j.shift ?? '').toLowerCase() === filters.shift.toLowerCase())
+            )
+            return (
+              <>
+                {/* Filter bar */}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, padding: '10px 14px', background: '#111827', borderRadius: 10, border: '1px solid #1F2937' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Min Match %</label>
+                    <input
+                      type="number" min="0" max="100"
+                      value={filters.minScore}
+                      onChange={e => setFilters(f => ({ ...f, minScore: Number(e.target.value) }))}
+                      style={{ width: 60, padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Location</label>
+                    <input
+                      type="text" placeholder="e.g. Lahore"
+                      value={filters.location}
+                      onChange={e => setFilters(f => ({ ...f, location: e.target.value }))}
+                      style={{ width: 100, padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Shift</label>
+                    <select
+                      value={filters.shift}
+                      onChange={e => setFilters(f => ({ ...f, shift: e.target.value }))}
+                      style={{ padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
+                    >
+                      <option value="">Any</option>
+                      <option value="day">Day</option>
+                      <option value="night">Night</option>
+                      <option value="remote">Remote</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => setFilters({ minScore: 0, location: '', shift: '' })}
+                    style={{ padding: '4px 10px', background: 'transparent', border: '1px solid #374151', borderRadius: 6, color: '#6B7280', fontSize: '0.75rem', cursor: 'pointer' }}
+                  >
+                    Clear
+                  </button>
+                  <span style={{ color: '#4B5563', fontSize: '0.72rem', marginLeft: 'auto' }}>
+                    {filtered.length} job{filtered.length !== 1 ? 's' : ''} shown
+                  </span>
+                </div>
+                {filtered.map((job, i) => (
             <div
               key={job.jobId}
               className="app-card"
@@ -150,6 +202,9 @@ export default function JobPostings() {
               <MatchBadge score={job.matchScore} />
             </div>
           ))}
+              </>
+            )
+          })()}
         </div>
       )}
     </AppLayout>

@@ -18,4 +18,5 @@ export const employerApi = {
   closeJob:             (jobId)          => api.patch(`/jobs/${jobId}/status`, { status: 'CLOSED' }),
   getSlot:              (slotId)         => api.get(`/schedule/slots/${slotId}`),
   hireCandidate:        (candidateId, jobPostingId) => api.post(`/employer/candidates/${candidateId}/hire`, { jobPostingId }),
+  getApplicationStatuses: (jobId) => api.get(`/jobs/${jobId}/application-statuses`),
 }

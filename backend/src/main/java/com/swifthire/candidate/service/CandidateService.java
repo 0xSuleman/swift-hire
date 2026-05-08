@@ -2,9 +2,12 @@ package com.swifthire.candidate.service;
 
 import com.swifthire.common.exception.ResourceNotFoundException;
 import com.swifthire.job.model.JobPosting;
+import com.swifthire.job.model.MatchScore;
 import com.swifthire.job.repository.JobPostingRepository;
 import com.swifthire.job.repository.MatchScoreRepository;
 import com.swifthire.job.service.AtsScoreService;
+import com.swifthire.scheduling.model.InterviewSlot;
+import com.swifthire.scheduling.repository.InterviewSlotRepository;
 import com.swifthire.user.model.Candidate;
 import com.swifthire.user.repository.CandidateRepository;
 import com.swifthire.user.repository.UserRepository;
@@ -19,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.Comparator;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +34,7 @@ public class CandidateService {
     private final JobPostingRepository jobPostingRepository;
     private final MatchScoreRepository matchScoreRepository;
     private final AtsScoreService atsScoreService;
+    private final InterviewSlotRepository slotRepository;
 
     @Value("${app.cv.upload-dir}")
     private String uploadDir;
@@ -167,5 +172,46 @@ public class CandidateService {
             result.add(entry);
         }
         return result;
+    }
+
+    // UC-11 extended: Returns all jobs a candidate has been matched to, with derived status
+    public List<Map<String, Object>> getMyApplications(String email) {
+        var user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+        var candidate = candidateRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Candidate profile not found."));
+
+        List<MatchScore> scores = matchScoreRepository.findByCandidateOrderByMatchPercentageDesc(candidate);
+        List<InterviewSlot> allSlots = slotRepository.findByCandidate(candidate);
+
+        return scores.stream().map(ms -> {
+            JobPosting job = ms.getJobPosting();
+            InterviewSlot slot = allSlots.stream()
+                    .filter(s -> s.getJobPosting().getId().equals(job.getId()))
+                    .max(Comparator.comparing(s -> s.getStatus().ordinal()))
+                    .orElse(null);
+
+            String status = deriveStatus(candidate, slot);
+
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("jobId",        job.getId());
+            m.put("jobTitle",     job.getJobTitle());
+            m.put("companyName",  job.getEmployer().getCompanyName());
+            m.put("matchScore",   ms.getMatchPercentage());
+            m.put("status",       status);
+            m.put("interviewDate", slot != null ? slot.getStartTime().toString() : null);
+            return m;
+        }).toList();
+    }
+
+    private String deriveStatus(Candidate candidate, InterviewSlot slot) {
+        if (candidate.getHiredAt() != null) return "HIRED";
+        if (slot == null) return "RECOMMENDED";
+        return switch (slot.getStatus()) {
+            case COMPLETED -> "COMPLETED";
+            case CONFIRMED -> "CONFIRMED";
+            case PENDING   -> "SCHEDULED";
+            default        -> "RECOMMENDED";
+        };
     }
 }

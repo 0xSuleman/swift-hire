@@ -136,6 +136,12 @@ public class ScheduleService {
             }
 
             LocalDateTime slotEnd = cursor.plusMinutes(SLOT_DURATION_MINUTES);
+            List<InterviewSlot> crossConflicts = slotRepository.findOverlappingSlotsByCandidate(
+                    candidate.getId(), cursor, slotEnd);
+            if (!crossConflicts.isEmpty()) {
+                continue;
+            }
+
             String link = "https://meet.jit.si/swift-hire-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 
             InterviewSlot slot = InterviewSlot.builder()

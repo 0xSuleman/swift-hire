@@ -25,6 +25,11 @@ public class MatchScore {
     // Percentage match (0.0 – 100.0)
     private double matchPercentage;
 
+    // Breakdown fields
+    private double skillMatchPct;
+    private boolean locationMatched;
+    private boolean shiftMatched;
+
     // Rank within the job posting's candidate list (1 = best)
     private int ranking;
 }

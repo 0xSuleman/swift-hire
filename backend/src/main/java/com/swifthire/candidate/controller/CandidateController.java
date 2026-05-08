@@ -62,4 +62,12 @@ public class CandidateController {
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(ApiResponse.ok(candidateService.getRecommendedJobs(userDetails.getUsername())));
     }
+
+    // UC-11 extended: View all matched jobs with derived application status
+    @GetMapping("/applications")
+    public ResponseEntity<ApiResponse<Object>> getMyApplications(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.ok("OK",
+                candidateService.getMyApplications(userDetails.getUsername())));
+    }
 }

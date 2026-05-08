@@ -14,4 +14,5 @@ export const adminApi = {
   getUserInterviews: (userId)       => api.get(`/admin/users/${userId}/interviews`),
   getUserReviews:    (userId)       => api.get(`/admin/users/${userId}/reviews`),
   getUserActivity:   (userId)       => api.get(`/admin/users/${userId}/activity`),
+  getNotificationLogs: () => api.get('/admin/notification-logs'),
 }

@@ -16,6 +16,7 @@ import Profile from './pages/candidate/Profile'
 import JobPostings from './pages/candidate/JobPostings'
 import RateEmployer from './pages/candidate/RateEmployer'
 import CandidateAnalytics from './pages/candidate/CandidateAnalytics'
+import MyApplications from './pages/candidate/MyApplications'
 
 // Employer
 import EmployerDashboard from './pages/employer/EmployerDashboard'
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="/candidate/interviews"  element={<MyInterviews />} />
         <Route path="/candidate/rate/:slotId" element={<RateEmployer />} />
         <Route path="/candidate/analytics"  element={<CandidateAnalytics />} />
+        <Route path="/candidate/applications" element={<MyApplications />} />
       </Route>
 
       {/* Employer */}

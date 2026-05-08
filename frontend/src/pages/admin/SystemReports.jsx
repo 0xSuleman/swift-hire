@@ -7,7 +7,8 @@ const CATEGORIES = [
   { value: 'users',     label: 'Users' },
   { value: 'jobs',      label: 'Jobs' },
   { value: 'ratings',   label: 'Ratings' },
-  { value: 'analytics', label: 'Analytics' },
+  { value: 'analytics',     label: 'Analytics' },
+  { value: 'notifications', label: 'Notifications' },
 ]
 
 const TODAY = new Date().toISOString().split('T')[0]
@@ -119,6 +120,8 @@ export default function SystemReports() {
   const [historyFilter, setHistoryFilter] = useState('')
   const [historyLoading, setHistoryLoading] = useState(false)
   const [tableFilter, setTableFilter] = useState('')
+  const [notifLogs, setNotifLogs] = useState([])
+  const [notifLoading, setNotifLoading] = useState(false)
 
   const loadHistory = async () => {
     setHistoryLoading(true)
@@ -133,6 +136,15 @@ export default function SystemReports() {
   }
 
   useEffect(() => { loadHistory() }, [])
+
+  useEffect(() => {
+    if (params.category !== 'notifications') return
+    setNotifLoading(true)
+    adminApi.getNotificationLogs()
+      .then(res => setNotifLogs(res.data.data ?? []))
+      .catch(() => setNotifLogs([]))
+      .finally(() => setNotifLoading(false))
+  }, [params.category])
 
   const filterRecords = (arr) =>
     tableFilter.trim()
@@ -374,6 +386,56 @@ export default function SystemReports() {
               {/* Flat records (jobs) */}
               {records !== undefined && (
                 <ReportSection label="" color="#6B7280" records={filterRecords(records)} />
+              )}
+            </div>
+          )}
+
+          {/* Notifications panel */}
+          {params.category === 'notifications' && (
+            <div className="app-card" style={{ marginTop: 16 }}>
+              <p style={{ color: '#6B7280', fontSize: '0.82rem', marginBottom: 14 }}>
+                All email notification events — invitations and reminders.
+              </p>
+              {notifLoading ? (
+                <div style={{ color: '#4B5563', fontSize: '0.85rem' }}>Loading...</div>
+              ) : notifLogs.length === 0 ? (
+                <div style={{ color: '#4B5563', fontSize: '0.85rem', textAlign: 'center', padding: '32px 0' }}>No notification logs yet.</div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #1F2937' }}>
+                        {['Recipient', 'Event', 'Status', 'Sent At', 'Error'].map(h => (
+                          <th key={h} style={{ textAlign: 'left', padding: '8px 10px', color: '#6B7280', fontWeight: 600 }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {notifLogs.map(log => (
+                        <tr key={log.id} style={{ borderBottom: '1px solid #111827' }}>
+                          <td style={{ padding: '8px 10px', color: '#9CA3AF' }}>{log.recipientEmail}</td>
+                          <td style={{ padding: '8px 10px', color: '#9CA3AF' }}>{log.eventType}</td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <span style={{
+                              padding: '2px 8px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600,
+                              background: log.status === 'SENT' ? '#2EE5B015' : log.status === 'FAILED' ? '#EF444415' : '#F59E0B15',
+                              color:      log.status === 'SENT' ? '#2EE5B0'   : log.status === 'FAILED' ? '#EF4444'   : '#F59E0B',
+                              border: `1px solid ${log.status === 'SENT' ? '#2EE5B030' : log.status === 'FAILED' ? '#EF444430' : '#F59E0B30'}`,
+                            }}>
+                              {log.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 10px', color: '#6B7280' }}>
+                            {log.sentAt ? new Date(log.sentAt).toLocaleString() : '—'}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: '#EF4444', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {log.errorMessage ?? '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}

@@ -19,7 +19,7 @@ function MatchBadge({ score }) {
   )
 }
 
-function CandidateProfileModal({ candidateId, onClose }) {
+function CandidateProfileModal({ candidateId, breakdown, onClose }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -110,6 +110,30 @@ function CandidateProfileModal({ candidateId, onClose }) {
                 This candidate hasn't completed their profile yet.
               </p>
             )}
+
+            {/* ATS Breakdown */}
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #1F2937' }}>
+              <p style={{ color: '#6B7280', fontSize: '0.72rem', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>ATS Breakdown</p>
+              {/* Skill match progress bar */}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span style={{ color: '#9CA3AF', fontSize: '0.75rem' }}>Skill Match</span>
+                  <span style={{ color: '#2EE5B0', fontSize: '0.75rem', fontWeight: 600 }}>{Math.round(breakdown?.skillMatchPct ?? 0)}%</span>
+                </div>
+                <div style={{ height: 5, background: '#1F2937', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${breakdown?.skillMatchPct ?? 0}%`, background: '#2EE5B0', borderRadius: 4, transition: 'width 0.3s' }} />
+                </div>
+              </div>
+              {/* Location + Shift */}
+              <div style={{ display: 'flex', gap: 16 }}>
+                <span style={{ fontSize: '0.75rem', color: breakdown?.locationMatched ? '#2EE5B0' : '#EF4444' }}>
+                  {breakdown?.locationMatched ? '✓' : '✗'} Location
+                </span>
+                <span style={{ fontSize: '0.75rem', color: breakdown?.shiftMatched ? '#2EE5B0' : '#EF4444' }}>
+                  {breakdown?.shiftMatched ? '✓' : '✗'} Shift
+                </span>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -125,6 +149,9 @@ export default function RecommendedCandidates() {
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState('')
   const [viewingId, setViewingId]   = useState(null)
+  const [viewingBreakdown, setViewingBreakdown] = useState(null)
+  const [filters, setFilters]       = useState({ minScore: 0, minRating: 0 })
+  const [appStatuses, setAppStatuses] = useState({}) // keyed by candidateId
 
   useEffect(() => {
     employerApi.getCandidates(jobId)
@@ -132,6 +159,17 @@ export default function RecommendedCandidates() {
       .catch(() => setError('Could not load candidates.'))
       .finally(() => setLoading(false))
   }, [jobId])
+
+  useEffect(() => {
+    if (!jobId || candidates.length === 0) return
+    employerApi.getApplicationStatuses(jobId)
+      .then(res => {
+        const map = {}
+        ;(res.data.data ?? []).forEach(a => { map[a.candidateId] = a.status })
+        setAppStatuses(map)
+      })
+      .catch(() => {}) // non-critical
+  }, [jobId, candidates.length])
 
   const toggle    = id => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
   const toggleAll = () => setSelected(s => s.length === candidates.length ? [] : candidates.map(c => c.candidateId))
@@ -141,9 +179,14 @@ export default function RecommendedCandidates() {
     navigate(`/employer/schedule/${jobId}`, { state: { selectedIds: selected } })
   }
 
+  const filtered = candidates.filter(c =>
+    c.matchScore >= filters.minScore &&
+    c.averageRating >= filters.minRating
+  )
+
   return (
     <>
-    {viewingId && <CandidateProfileModal candidateId={viewingId} onClose={() => setViewingId(null)} />}
+    {viewingId && <CandidateProfileModal candidateId={viewingId} breakdown={viewingBreakdown} onClose={() => { setViewingId(null); setViewingBreakdown(null) }} />}
     <AppLayout>
       <div className="page-header-flex">
         <div>
@@ -200,6 +243,42 @@ export default function RecommendedCandidates() {
       {/* List */}
       {!loading && candidates.length > 0 && (
         <>
+          {/* Filter bar */}
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, padding: '10px 14px', background: '#111827', borderRadius: 10, border: '1px solid #1F2937' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Min ATS %</label>
+              <input
+                type="number" min="0" max="100"
+                value={filters.minScore}
+                onChange={e => setFilters(f => ({ ...f, minScore: Number(e.target.value) }))}
+                style={{ width: 60, padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Min Rating</label>
+              <select
+                value={filters.minRating}
+                onChange={e => setFilters(f => ({ ...f, minRating: Number(e.target.value) }))}
+                style={{ padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
+              >
+                <option value={0}>Any</option>
+                <option value={1}>1★+</option>
+                <option value={2}>2★+</option>
+                <option value={3}>3★+</option>
+                <option value={4}>4★+</option>
+              </select>
+            </div>
+            <button
+              onClick={() => setFilters({ minScore: 0, minRating: 0 })}
+              style={{ padding: '4px 10px', background: 'transparent', border: '1px solid #374151', borderRadius: 6, color: '#6B7280', fontSize: '0.75rem', cursor: 'pointer' }}
+            >
+              Clear
+            </button>
+            <span style={{ color: '#4B5563', fontSize: '0.72rem', marginLeft: 'auto' }}>
+              Showing {filtered.length} of {candidates.length}
+            </span>
+          </div>
+
           {/* Select all row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: '0.78rem', color: '#4B5563' }}>
@@ -219,7 +298,7 @@ export default function RecommendedCandidates() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {candidates.map((c, i) => {
+            {filtered.map((c, i) => {
               const isSelected = selected.includes(c.candidateId)
               return (
                 <div
@@ -284,9 +363,32 @@ export default function RecommendedCandidates() {
                   {/* Match badge */}
                   <MatchBadge score={c.matchScore} />
 
+                  {/* Application status badge */}
+                  {appStatuses[c.candidateId] && (
+                    <span style={{
+                      padding: '2px 8px', borderRadius: 12, fontSize: '0.7rem', fontWeight: 600,
+                      background: appStatuses[c.candidateId] === 'HIRED' ? '#34D39915' :
+                                  appStatuses[c.candidateId] === 'COMPLETED' ? '#818CF815' :
+                                  appStatuses[c.candidateId] === 'CONFIRMED' ? '#2EE5B015' :
+                                  appStatuses[c.candidateId] === 'SCHEDULED' ? '#F59E0B15' : '#1F2937',
+                      color: appStatuses[c.candidateId] === 'HIRED' ? '#34D399' :
+                             appStatuses[c.candidateId] === 'COMPLETED' ? '#818CF8' :
+                             appStatuses[c.candidateId] === 'CONFIRMED' ? '#2EE5B0' :
+                             appStatuses[c.candidateId] === 'SCHEDULED' ? '#F59E0B' : '#6B7280',
+                      border: `1px solid ${
+                        appStatuses[c.candidateId] === 'HIRED' ? '#34D39930' :
+                        appStatuses[c.candidateId] === 'COMPLETED' ? '#818CF830' :
+                        appStatuses[c.candidateId] === 'CONFIRMED' ? '#2EE5B030' :
+                        appStatuses[c.candidateId] === 'SCHEDULED' ? '#F59E0B30' : '#374151'
+                      }`,
+                    }}>
+                      {appStatuses[c.candidateId]}
+                    </span>
+                  )}
+
                   {/* View profile */}
                   <button
-                    onClick={e => { e.stopPropagation(); setViewingId(c.candidateId) }}
+                    onClick={e => { e.stopPropagation(); setViewingId(c.candidateId); setViewingBreakdown({ skillMatchPct: c.skillMatchPct, locationMatched: c.locationMatched, shiftMatched: c.shiftMatched }) }}
                     style={{ background: 'none', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', color: '#4B5563', display: 'flex', alignItems: 'center', flexShrink: 0, transition: 'all 0.2s' }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(46,229,176,0.3)'; e.currentTarget.style.color = '#2EE5B0' }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#4B5563' }}

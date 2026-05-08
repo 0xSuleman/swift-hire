@@ -74,4 +74,13 @@ public class JobController {
         }
         return ResponseEntity.badRequest().body(ApiResponse.error("Unsupported status."));
     }
+
+    // UC-03 extended: Get all matched candidates with their derived application status
+    @GetMapping("/{jobId}/application-statuses")
+    public ResponseEntity<ApiResponse<Object>> getApplicationStatuses(
+            @PathVariable Long jobId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.ok("OK",
+                jobService.getCandidateApplicationStatuses(userDetails.getUsername(), jobId)));
+    }
 }

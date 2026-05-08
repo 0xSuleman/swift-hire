@@ -40,11 +40,25 @@ public class AtsScoreService {
                 .filter(c -> jobPosting.getLocation() == null ||
                              jobPosting.getLocation().equalsIgnoreCase(c.getPreferredLocation()))
                 .map(candidate -> {
-                    double pct = calculateMatch(parseTags(candidate.getParsedSkills()), requiredTags);
+                    Set<String> candidateTags = parseTags(candidate.getParsedSkills());
+                    double skillPct = calculateMatch(candidateTags, requiredTags);
+                    double bonus    = preferenceBonus(candidate, jobPosting);
+                    double overall  = Math.min(skillPct + bonus, 100.0);
+
+                    boolean locMatched = jobPosting.getLocation() == null ||
+                            (candidate.getPreferredLocation() != null &&
+                             candidate.getPreferredLocation().equalsIgnoreCase(jobPosting.getLocation()));
+                    boolean shiftMatched = jobPosting.getShift() == null ||
+                            (candidate.getPreferredShift() != null &&
+                             candidate.getPreferredShift().equalsIgnoreCase(jobPosting.getShift()));
+
                     return MatchScore.builder()
                             .candidate(candidate)
                             .jobPosting(jobPosting)
-                            .matchPercentage(Math.min(pct, 100.0))
+                            .matchPercentage(overall)
+                            .skillMatchPct(skillPct)
+                            .locationMatched(locMatched)
+                            .shiftMatched(shiftMatched)
                             .build();
                 })
                 .filter(ms -> ms.getMatchPercentage() > 0)
