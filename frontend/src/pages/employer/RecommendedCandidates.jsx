@@ -113,15 +113,25 @@ function CandidateProfileModal({ candidateId, breakdown, onClose }) {
 
             {/* ATS Breakdown */}
             <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #1F2937' }}>
-              <p style={{ color: '#6B7280', fontSize: '0.72rem', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>ATS Breakdown</p>
-              {/* Skill match progress bar */}
+              <p style={{ color: '#6B7280', fontSize: '0.72rem', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>ATS Breakdown</p>
+              {/* Overall match bar */}
               <div style={{ marginBottom: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                  <span style={{ color: '#9CA3AF', fontSize: '0.75rem' }}>Skill Match</span>
-                  <span style={{ color: '#2EE5B0', fontSize: '0.75rem', fontWeight: 600 }}>{Math.round(breakdown?.skillMatchPct ?? 0)}%</span>
+                  <span style={{ color: '#9CA3AF', fontSize: '0.75rem' }}>Overall Match</span>
+                  <span style={{ color: '#2EE5B0', fontSize: '0.75rem', fontWeight: 600 }}>{Math.round(breakdown?.overallScore ?? 0)}%</span>
                 </div>
-                <div style={{ height: 5, background: '#1F2937', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${breakdown?.skillMatchPct ?? 0}%`, background: '#2EE5B0', borderRadius: 4, transition: 'width 0.3s' }} />
+                <div style={{ height: 5, background: '#374151', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${breakdown?.overallScore ?? 0}%`, background: '#2EE5B0', borderRadius: 4, transition: 'width 0.3s' }} />
+                </div>
+              </div>
+              {/* Skill match bar */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span style={{ color: '#9CA3AF', fontSize: '0.75rem' }}>Skill Match</span>
+                  <span style={{ color: '#9CA3AF', fontSize: '0.75rem', fontWeight: 600 }}>{Math.round(breakdown?.skillMatchPct ?? 0)}%</span>
+                </div>
+                <div style={{ height: 5, background: '#374151', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${breakdown?.skillMatchPct ?? 0}%`, background: '#60A5FA', borderRadius: 4, transition: 'width 0.3s' }} />
                 </div>
               </div>
               {/* Location + Shift */}
@@ -388,7 +398,7 @@ export default function RecommendedCandidates() {
 
                   {/* View profile */}
                   <button
-                    onClick={e => { e.stopPropagation(); setViewingId(c.candidateId); setViewingBreakdown({ skillMatchPct: c.skillMatchPct, locationMatched: c.locationMatched, shiftMatched: c.shiftMatched }) }}
+                    onClick={e => { e.stopPropagation(); setViewingId(c.candidateId); setViewingBreakdown({ overallScore: c.matchScore, skillMatchPct: c.skillMatchPct, locationMatched: c.locationMatched, shiftMatched: c.shiftMatched }) }}
                     style={{ background: 'none', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', color: '#4B5563', display: 'flex', alignItems: 'center', flexShrink: 0, transition: 'all 0.2s' }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(46,229,176,0.3)'; e.currentTarget.style.color = '#2EE5B0' }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#4B5563' }}

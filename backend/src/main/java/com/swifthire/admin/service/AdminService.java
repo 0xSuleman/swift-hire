@@ -67,7 +67,9 @@ public class AdminService {
 
         if (maxRating != null) {
             final double cap = maxRating;
-            users = users.stream().filter(u -> u.getAverageRating() <= cap).toList();
+            users = users.stream()
+                    .filter(u -> Math.round(u.getAverageRating() * 10.0) / 10.0 <= cap)
+                    .toList();
         }
 
         if (search != null && !search.isBlank()) {

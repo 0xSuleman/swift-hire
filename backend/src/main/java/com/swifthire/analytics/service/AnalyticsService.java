@@ -90,7 +90,7 @@ public class AnalyticsService {
 
         long totalSlots = 0;
         long acceptedSlots = 0;   // CONFIRMED + COMPLETED
-        long timeToHireSum = 0;
+        double timeToHireSum = 0;
         long timeToHireCount = 0;
 
         List<Map<String, Object>> perJob = new ArrayList<>();
@@ -112,20 +112,18 @@ public class AnalyticsService {
             totalSlots    += jobTotal;
             acceptedSlots += jobAccepted;
 
-            // Time-to-hire: days from job creation to earliest confirmed/completed slot
+            // Time-to-hire: fractional days from job creation to earliest confirmed/completed slot
             var earliest = slots.stream()
                     .filter(s -> s.getStatus() == InterviewSlot.SlotStatus.CONFIRMED ||
                                  s.getStatus() == InterviewSlot.SlotStatus.COMPLETED)
                     .map(InterviewSlot::getStartTime)
                     .min(java.time.LocalDateTime::compareTo);
+            double jobTimeToHire = 0;
             if (earliest.isPresent()) {
-                timeToHireSum   += Math.max(0, Duration.between(job.getCreatedAt(), earliest.get()).toDays());
+                jobTimeToHire = Math.max(0, Duration.between(job.getCreatedAt(), earliest.get()).toMinutes() / 1440.0);
+                jobTimeToHire = Math.round(jobTimeToHire * 10) / 10.0;
+                timeToHireSum += jobTimeToHire;
                 timeToHireCount++;
-            }
-
-            long jobTimeToHire = 0;
-            if (earliest.isPresent()) {
-                jobTimeToHire = Math.max(0, Duration.between(job.getCreatedAt(), earliest.get()).toDays());
             }
 
             Map<String, Object> jobMap = new LinkedHashMap<>();

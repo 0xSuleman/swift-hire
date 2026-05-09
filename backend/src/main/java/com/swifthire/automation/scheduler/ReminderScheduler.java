@@ -45,8 +45,8 @@ public class ReminderScheduler {
         }
     }
 
-    // Runs every hour on the hour
-    @Scheduled(cron = "0 0 * * * *")
+    // Runs every minute — flags on each slot prevent duplicate sends
+    @Scheduled(cron = "0 * * * * *")
     @Transactional
     public void sendReminders() {
         LocalDateTime now = LocalDateTime.now();
