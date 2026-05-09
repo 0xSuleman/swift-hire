@@ -128,6 +128,14 @@ public class AuthService {
             throw new IllegalStateException("Please verify your email before logging in.");
         }
 
+        // NFR 3.8 — reject banned or deactivated accounts before touching the auth manager
+        if (user.getAccountStatus() == AccountStatus.BANNED) {
+            throw new IllegalStateException("Your account has been banned. Contact the administrator.");
+        }
+        if (user.getAccountStatus() == AccountStatus.DEACTIVATED) {
+            throw new IllegalStateException("Your account is locked due to too many failed login attempts. Contact the administrator.");
+        }
+
         // NFR 3.8.4 — account lock check
         if (user.getFailedLoginAttempts() >= maxFailedAttempts) {
             user.setAccountStatus(AccountStatus.DEACTIVATED);
