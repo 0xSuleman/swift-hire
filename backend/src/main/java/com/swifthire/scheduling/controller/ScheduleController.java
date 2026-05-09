@@ -1,5 +1,7 @@
 package com.swifthire.scheduling.controller;
 
+import com.swifthire.application.model.ApplicationStatus;
+import com.swifthire.application.service.ApplicationService;
 import com.swifthire.common.dto.ApiResponse;
 import com.swifthire.review.repository.ReviewRepository;
 import com.swifthire.scheduling.model.InterviewSlot;
@@ -37,6 +39,7 @@ public class ScheduleController {
     private final CandidateRepository candidateRepository;
     private final UserRepository userRepository;
     private final ReviewRepository reviewRepository;
+    private final ApplicationService applicationService;
 
     // UC-04: Auto-Schedule Batch
     @PostMapping("/batch")
@@ -250,6 +253,16 @@ public class ScheduleController {
 
         slot.setStatus(newStatus);
         slotRepository.save(slot);
+        if (newStatus == InterviewSlot.SlotStatus.CONFIRMED) {
+            applicationService.changeStatus(slot.getCandidate(), slot.getJobPosting(),
+                    ApplicationStatus.CONFIRMED, user.getEmail(), "SLOT_CONFIRMED");
+        } else if (newStatus == InterviewSlot.SlotStatus.COMPLETED) {
+            applicationService.changeStatus(slot.getCandidate(), slot.getJobPosting(),
+                    ApplicationStatus.COMPLETED, user.getEmail(), "SLOT_COMPLETED");
+        } else if (newStatus == InterviewSlot.SlotStatus.CANCELLED) {
+            applicationService.resetToRecommendedIfNonTerminal(slot.getCandidate(), slot.getJobPosting(),
+                    user.getEmail(), "SLOT_CANCELLED");
+        }
         return ResponseEntity.ok(ApiResponse.ok("Slot status updated to " + newStatus + ".", null));
     }
 }

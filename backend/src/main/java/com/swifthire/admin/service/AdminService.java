@@ -3,6 +3,7 @@ package com.swifthire.admin.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swifthire.admin.model.AuditLog;
+import com.swifthire.application.service.ApplicationService;
 import com.swifthire.automation.model.NotificationLog;
 import com.swifthire.automation.repository.NotificationLogRepository;
 import com.swifthire.admin.model.GraphicalReport;
@@ -11,8 +12,10 @@ import com.swifthire.admin.repository.GraphicalReportRepository;
 import com.swifthire.common.exception.ResourceNotFoundException;
 import com.swifthire.auth.repository.PasswordResetTokenRepository;
 import com.swifthire.job.model.JobPosting;
+import com.swifthire.job.model.MatchScore;
 import com.swifthire.job.repository.JobPostingRepository;
 import com.swifthire.job.repository.MatchScoreRepository;
+import com.swifthire.review.model.Review;
 import com.swifthire.review.repository.ReviewRepository;
 import com.swifthire.scheduling.repository.InterviewSlotRepository;
 import com.swifthire.scheduling.repository.InterviewWindowRepository;
@@ -26,6 +29,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -48,6 +54,7 @@ public class AdminService {
     private final GraphicalReportRepository graphicalReportRepository;
     private final AuditLogRepository auditLogRepository;
     private final NotificationLogRepository notificationLogRepository;
+    private final ApplicationService applicationService;
     private final ObjectMapper objectMapper;
 
     public List<Map<String, Object>> getUsers(String role, Double maxRating, String status, String search) {
@@ -180,6 +187,7 @@ public class AdminService {
             var candidate = candidateRepository.findByUserId(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("Candidate profile not found."));
             slotRepository.deleteAll(slotRepository.findByCandidate(candidate));
+            applicationService.deleteByCandidate(candidate);
             matchScoreRepository.deleteByCandidate(candidate);
             resetTokenRepository.deleteByUserId(userId);
             candidateRepository.delete(candidate);
@@ -190,6 +198,7 @@ public class AdminService {
             List<JobPosting> jobs = jobPostingRepository.findByEmployer(employer);
             for (JobPosting job : jobs) {
                 slotRepository.deleteAll(slotRepository.findByJobPostingId(job.getId()));
+                applicationService.deleteByJobPostingId(job.getId());
                 matchScoreRepository.deleteByJobPostingId(job.getId());
             }
             jobPostingRepository.deleteAll(jobs);
@@ -230,7 +239,9 @@ public class AdminService {
 
     @Transactional
     public Map<String, Object> generateReport(String category, String from, String to,
-                                               String userType, String adminEmail) {
+                                               String userType, Double atsThreshold, String adminEmail) {
+        DateRange range = parseDateRange(from, to);
+        double threshold = atsThreshold != null ? atsThreshold : 50.0;
         Map<String, Object> reportData = new LinkedHashMap<>();
 
         switch (category.toLowerCase()) {
@@ -241,7 +252,10 @@ public class AdminService {
                         ? userRepository.findByRole(filterRole)
                         : userRepository.findAll().stream()
                             .filter(u -> u.getRole() != Role.ADMIN).toList();
-                allUsers = allUsers.stream().filter(User::isEmailVerified).toList();
+                allUsers = allUsers.stream()
+                        .filter(User::isEmailVerified)
+                        .filter(u -> range.contains(u.getCreatedAt()))
+                        .toList();
 
                 reportData.put("totalUsers",  allUsers.size());
                 reportData.put("totalCandidates", allUsers.stream().filter(u -> u.getRole() == Role.CANDIDATE).count());
@@ -297,7 +311,9 @@ public class AdminService {
                 }
             }
             case "jobs" -> {
-                List<JobPosting> allJobs = jobPostingRepository.findAll();
+                List<JobPosting> allJobs = jobPostingRepository.findAll().stream()
+                        .filter(j -> range.contains(j.getCreatedAt()))
+                        .toList();
                 reportData.put("totalJobs", allJobs.size());
                 reportData.put("open",      allJobs.stream().filter(j -> j.getStatus() == JobPosting.JobStatus.OPEN).count());
                 reportData.put("closed",    allJobs.stream().filter(j -> j.getStatus() == JobPosting.JobStatus.CLOSED).count());
@@ -320,13 +336,23 @@ public class AdminService {
                 reportData.put("records", records);
             }
             case "ratings" -> {
-                List<User> rated = userRepository.findAll().stream()
-                        .filter(u -> u.isEmailVerified() && u.getRole() != Role.ADMIN && u.getTotalRatings() > 0)
-                        .sorted(Comparator.comparingDouble(User::getAverageRating).reversed())
+                List<Review> reviews = reviewRepository.findAll().stream()
+                        .filter(r -> range.contains(r.getCreatedAt()))
                         .toList();
-                double avg = rated.stream().mapToDouble(User::getAverageRating).average().orElse(0.0);
+                Map<Long, List<Review>> reviewsByRateeId = new LinkedHashMap<>();
+                reviews.forEach(r -> reviewsByRateeId
+                        .computeIfAbsent(r.getRatee().getId(), ignored -> new ArrayList<>())
+                        .add(r));
+                List<User> rated = userRepository.findAll().stream()
+                        .filter(u -> u.isEmailVerified() && u.getRole() != Role.ADMIN)
+                        .filter(u -> reviewsByRateeId.containsKey(u.getId()))
+                        .sorted((a, b) -> Double.compare(
+                                averageRating(reviewsByRateeId.get(b.getId())),
+                                averageRating(reviewsByRateeId.get(a.getId()))))
+                        .toList();
+                double avg = reviews.stream().mapToInt(Review::getRatingValue).average().orElse(0.0);
                 reportData.put("platformAverageRating", Math.round(avg * 100.0) / 100.0);
-                reportData.put("totalReviews",   reviewRepository.count());
+                reportData.put("totalReviews",   reviews.size());
                 reportData.put("usersWithRatings", rated.size());
 
                 List<Map<String, Object>> candidateRecords = rated.stream()
@@ -335,8 +361,8 @@ public class AdminService {
                             Map<String, Object> r = new LinkedHashMap<>();
                             r.put("name",          u.getName());
                             r.put("email",         u.getEmail());
-                            r.put("averageRating", u.getAverageRating());
-                            r.put("totalRatings",  u.getTotalRatings());
+                            r.put("averageRating", averageRating(reviewsByRateeId.get(u.getId())));
+                            r.put("totalRatings",  reviewsByRateeId.get(u.getId()).size());
                             candidateRepository.findByUserId(u.getId()).ifPresent(c -> {
                                 r.put("location", c.getPreferredLocation());
                                 r.put("shift",    c.getPreferredShift());
@@ -352,8 +378,8 @@ public class AdminService {
                             Map<String, Object> r = new LinkedHashMap<>();
                             r.put("name",          u.getName());
                             r.put("email",         u.getEmail());
-                            r.put("averageRating", u.getAverageRating());
-                            r.put("totalRatings",  u.getTotalRatings());
+                            r.put("averageRating", averageRating(reviewsByRateeId.get(u.getId())));
+                            r.put("totalRatings",  reviewsByRateeId.get(u.getId()).size());
                             employerRepository.findByUserId(u.getId()).ifPresent(e -> {
                                 r.put("companyName",     e.getCompanyName());
                                 r.put("companyLocation", e.getCompanyLocation());
@@ -363,12 +389,32 @@ public class AdminService {
                 reportData.put("employerRecords", employerRecords);
             }
             case "analytics" -> {
-                reportData.put("totalInterviews",  slotRepository.count());
-                reportData.put("totalJobPostings", jobPostingRepository.count());
-                reportData.put("totalCandidates",  userRepository.findByRole(Role.CANDIDATE).size());
-                reportData.put("totalEmployers",   userRepository.findByRole(Role.EMPLOYER).size());
-                reportData.put("totalReviews",     reviewRepository.count());
-                reportData.put("hiredCandidates",  candidateRepository.findAll().stream().filter(c -> c.getHiredAt() != null).count());
+                List<User> users = userRepository.findAll().stream()
+                        .filter(u -> u.isEmailVerified() && u.getRole() != Role.ADMIN)
+                        .filter(u -> range.contains(u.getCreatedAt()))
+                        .toList();
+                List<JobPosting> jobs = jobPostingRepository.findAll().stream()
+                        .filter(j -> range.contains(j.getCreatedAt()))
+                        .toList();
+                List<Review> reviews = reviewRepository.findAll().stream()
+                        .filter(r -> range.contains(r.getCreatedAt()))
+                        .toList();
+                long interviewCount = slotRepository.findAll().stream()
+                        .filter(s -> range.contains(s.getStartTime()))
+                        .count();
+                reportData.put("totalInterviews",  interviewCount);
+                reportData.put("totalJobPostings", jobs.size());
+                reportData.put("totalCandidates",  users.stream().filter(u -> u.getRole() == Role.CANDIDATE).count());
+                reportData.put("totalEmployers",   users.stream().filter(u -> u.getRole() == Role.EMPLOYER).count());
+                reportData.put("totalReviews",     reviews.size());
+                reportData.put("hiredCandidates",  candidateRepository.findAll().stream()
+                        .filter(c -> range.contains(c.getHiredAt()))
+                        .count());
+                putAtsSummary(reportData, threshold, range);
+            }
+            case "ats" -> {
+                reportData.put("atsThreshold", threshold);
+                putAtsSummary(reportData, threshold, range);
             }
             default -> throw new IllegalArgumentException("Invalid filter. Please enter valid criteria.");
         }
@@ -392,17 +438,18 @@ public class AdminService {
     }
 
     @SuppressWarnings("unchecked")
-    public String exportReportCsv(String category, String from, String to, String userType, String adminEmail) {
-        Map<String, Object> data = generateReport(category, from, to, userType, adminEmail);
+    public String exportReportCsv(String category, String from, String to,
+                                  String userType, Double atsThreshold, String adminEmail) {
+        Map<String, Object> data = generateReport(category, from, to, userType, atsThreshold, adminEmail);
         StringBuilder csv = new StringBuilder();
         boolean wrote = false;
 
-        for (String key : new String[]{"candidateRecords", "employerRecords"}) {
+        for (String key : data.keySet()) {
             Object obj = data.get(key);
             if (obj instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Map) {
                 List<Map<String, Object>> rows = (List<Map<String, Object>>) list;
                 if (wrote) csv.append('\n');
-                csv.append(key.equals("candidateRecords") ? "CANDIDATES\n" : "EMPLOYERS\n");
+                csv.append(key.toUpperCase()).append('\n');
                 csv.append(String.join(",", rows.get(0).keySet())).append('\n');
                 for (Map<String, Object> row : rows) {
                     csv.append(row.values().stream()
@@ -415,26 +462,112 @@ public class AdminService {
         }
 
         if (!wrote) {
-            Object recordsObj = data.get("records");
-            if (recordsObj instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Map) {
-                List<Map<String, Object>> records = (List<Map<String, Object>>) list;
-                csv.append(String.join(",", records.get(0).keySet())).append('\n');
-                for (Map<String, Object> row : records) {
-                    csv.append(row.values().stream()
-                            .map(v -> v == null ? "" : v.toString().replace(",", ";"))
-                            .reduce("", (a, b) -> a.isEmpty() ? b : a + "," + b))
-                       .append('\n');
-                }
-            } else {
-                csv.append("key,value\n");
-                for (Map.Entry<String, Object> entry : data.entrySet()) {
-                    if (!(entry.getValue() instanceof List)) {
-                        csv.append(entry.getKey()).append(',').append(entry.getValue()).append('\n');
-                    }
+            csv.append("key,value\n");
+            for (Map.Entry<String, Object> entry : data.entrySet()) {
+                if (!(entry.getValue() instanceof List)) {
+                    csv.append(entry.getKey()).append(',').append(entry.getValue()).append('\n');
                 }
             }
         }
         return csv.toString();
+    }
+
+    private void putAtsSummary(Map<String, Object> reportData, double threshold, DateRange range) {
+        List<MatchScore> scores = matchScoreRepository.findAll().stream()
+                .filter(ms -> range.contains(ms.getJobPosting().getCreatedAt()))
+                .toList();
+        double platformAverage = scores.stream()
+                .mapToDouble(MatchScore::getMatchPercentage)
+                .average()
+                .orElse(0.0);
+
+        reportData.put("platformAverageAtsScore", Math.round(platformAverage * 10.0) / 10.0);
+        reportData.put("totalMatchScores", scores.size());
+        reportData.put("belowThresholdCount", scores.stream()
+                .filter(ms -> ms.getMatchPercentage() < threshold)
+                .count());
+
+        List<Map<String, Object>> records = jobPostingRepository.findAll().stream()
+                .filter(job -> range.contains(job.getCreatedAt()))
+                .map(job -> {
+                    List<MatchScore> jobScores = scores.stream()
+                            .filter(ms -> ms.getJobPosting().getId().equals(job.getId()))
+                            .toList();
+                    double average = jobScores.stream()
+                            .mapToDouble(MatchScore::getMatchPercentage)
+                            .average()
+                            .orElse(0.0);
+                    Map<String, Object> r = new LinkedHashMap<>();
+                    r.put("jobId", job.getId());
+                    r.put("jobTitle", job.getJobTitle());
+                    r.put("companyName", job.getEmployer().getCompanyName());
+                    r.put("averageAtsScore", Math.round(average * 10.0) / 10.0);
+                    r.put("candidateCount", jobScores.size());
+                    r.put("belowThresholdCount", jobScores.stream()
+                            .filter(ms -> ms.getMatchPercentage() < threshold)
+                            .count());
+                    return r;
+                })
+                .toList();
+        reportData.put("records", records);
+
+        List<Map<String, Object>> topCandidates = scores.stream()
+                .sorted(Comparator.comparing(MatchScore::getRanking))
+                .filter(ms -> ms.getRanking() <= 5)
+                .map(ms -> {
+                    Map<String, Object> r = new LinkedHashMap<>();
+                    r.put("jobId", ms.getJobPosting().getId());
+                    r.put("jobTitle", ms.getJobPosting().getJobTitle());
+                    r.put("candidateName", ms.getCandidate().getUser().getName());
+                    r.put("candidateEmail", ms.getCandidate().getUser().getEmail());
+                    r.put("atsScore", Math.round(ms.getMatchPercentage() * 10.0) / 10.0);
+                    r.put("ranking", ms.getRanking());
+                    return r;
+                })
+                .toList();
+        reportData.put("topCandidates", topCandidates);
+
+        List<Map<String, Object>> belowThresholdCandidates = scores.stream()
+                .filter(ms -> ms.getMatchPercentage() < threshold)
+                .map(ms -> {
+                    Map<String, Object> r = new LinkedHashMap<>();
+                    r.put("jobId", ms.getJobPosting().getId());
+                    r.put("jobTitle", ms.getJobPosting().getJobTitle());
+                    r.put("candidateName", ms.getCandidate().getUser().getName());
+                    r.put("candidateEmail", ms.getCandidate().getUser().getEmail());
+                    r.put("atsScore", Math.round(ms.getMatchPercentage() * 10.0) / 10.0);
+                    r.put("threshold", threshold);
+                    return r;
+                })
+                .toList();
+        reportData.put("belowThresholdCandidates", belowThresholdCandidates);
+    }
+
+    private double averageRating(List<Review> reviews) {
+        if (reviews == null || reviews.isEmpty()) return 0.0;
+        double average = reviews.stream().mapToInt(Review::getRatingValue).average().orElse(0.0);
+        return Math.round(average * 100.0) / 100.0;
+    }
+
+    private DateRange parseDateRange(String from, String to) {
+        try {
+            LocalDate fromDate = (from == null || from.isBlank()) ? null : LocalDate.parse(from);
+            LocalDate toDate = (to == null || to.isBlank()) ? null : LocalDate.parse(to);
+            if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+                throw new IllegalArgumentException("From date must be before or equal to To date.");
+            }
+            return new DateRange(fromDate, toDate);
+        } catch (DateTimeParseException ex) {
+            throw new IllegalArgumentException("Invalid date format. Use YYYY-MM-DD.");
+        }
+    }
+
+    private record DateRange(LocalDate from, LocalDate to) {
+        boolean contains(LocalDateTime value) {
+            if (value == null) return false;
+            LocalDate date = value.toLocalDate();
+            return (from == null || !date.isBefore(from)) && (to == null || !date.isAfter(to));
+        }
     }
 
     public List<Map<String, Object>> getUserInterviews(Long userId) {
@@ -576,6 +709,11 @@ public class AdminService {
                 .mapToDouble(User::getAverageRating).average().orElse(0.0);
         m.put("platformAverageRating", Math.round(avgRating * 100.0) / 100.0);
 
+        List<MatchScore> allScores = matchScoreRepository.findAll();
+        double avgAts = allScores.stream().mapToDouble(MatchScore::getMatchPercentage).average().orElse(0.0);
+        m.put("platformAverageAtsScore", Math.round(avgAts * 10.0) / 10.0);
+        m.put("belowAtsThreshold", allScores.stream().filter(ms -> ms.getMatchPercentage() < 50.0).count());
+
         List<Map<String, Object>> topEmployers = employerRepository.findAll().stream()
                 .map(e -> {
                     Map<String, Object> em = new LinkedHashMap<>();
@@ -594,8 +732,11 @@ public class AdminService {
         return m;
     }
 
-    public List<Map<String, Object>> getReportHistory() {
-        return graphicalReportRepository.findAllByOrderByGeneratedAtDesc().stream().map(r -> {
+    public List<Map<String, Object>> getReportHistory(String from, String to) {
+        DateRange range = parseDateRange(from, to);
+        return graphicalReportRepository.findAllByOrderByGeneratedAtDesc().stream()
+                .filter(r -> range.contains(r.getGeneratedAt()))
+                .map(r -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id",            r.getId());
             m.put("reportType",    r.getReportType());

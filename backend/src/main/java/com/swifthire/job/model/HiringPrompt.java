@@ -26,6 +26,13 @@ public class HiringPrompt {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String rawText;
 
+    @Column(columnDefinition = "TEXT")
+    private String parsedSkills;
+
+    private String parsedLocation;
+    private String parsedShift;
+    private Integer parsedExperienceYears;
+
     @Column(updatable = false)
     private LocalDateTime submissionDate;
 

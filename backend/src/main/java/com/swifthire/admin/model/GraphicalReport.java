@@ -33,7 +33,7 @@ public class GraphicalReport {
     private User generatedBy;
 
     // Aggregated result stored as JSON string
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "LONGTEXT")
     private String data;
 
     @PrePersist

@@ -59,8 +59,13 @@ public class CandidateController {
     // UC-11: View filtered/ranked job postings
     @GetMapping("/job-postings")
     public ResponseEntity<ApiResponse<Object>> getJobPostings(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(ApiResponse.ok(candidateService.getRecommendedJobs(userDetails.getUsername())));
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) String shift,
+            @RequestParam(required = false) Double minMatchScore,
+            @RequestParam(required = false) String skill) {
+        return ResponseEntity.ok(ApiResponse.ok(candidateService.getRecommendedJobs(
+                userDetails.getUsername(), location, shift, minMatchScore, skill)));
     }
 
     // UC-11 extended: View all matched jobs with derived application status

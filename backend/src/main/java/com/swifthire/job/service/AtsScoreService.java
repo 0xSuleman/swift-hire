@@ -1,5 +1,6 @@
 package com.swifthire.job.service;
 
+import com.swifthire.application.service.ApplicationService;
 import com.swifthire.job.model.JobPosting;
 import com.swifthire.job.model.MatchScore;
 import com.swifthire.job.repository.MatchScoreRepository;
@@ -23,6 +24,7 @@ public class AtsScoreService {
 
     private final CandidateRepository candidateRepository;
     private final MatchScoreRepository matchScoreRepository;
+    private final ApplicationService applicationService;
 
     @Transactional
     public List<MatchScore> scoreAndRank(JobPosting jobPosting) {
@@ -69,7 +71,9 @@ public class AtsScoreService {
 
         // Persist (clear old scores for this posting first)
         matchScoreRepository.deleteByJobPostingId(jobPosting.getId());
-        return matchScoreRepository.saveAll(scores);
+        List<MatchScore> savedScores = matchScoreRepository.saveAll(scores);
+        applicationService.ensureRecommendedForScores(savedScores, null, "ATS_SCORE");
+        return savedScores;
     }
 
     // Candidate-side: score one candidate against one job (no persistence)

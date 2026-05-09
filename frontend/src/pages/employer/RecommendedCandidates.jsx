@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { employerApi } from '../../api/employerApi'
 import AppLayout from '../../components/common/AppLayout'
@@ -151,35 +151,87 @@ function CandidateProfileModal({ candidateId, breakdown, onClose }) {
   )
 }
 
+const DEFAULT_CANDIDATE_FILTERS = {
+  minScore: '',
+  minRating: '',
+  skill: '',
+  location: '',
+  shift: '',
+  applicationStatus: '',
+}
+
+function buildCandidateFilterParams(f) {
+  const params = {}
+  if (Number(f.minScore) > 0) params.minAtsScore = Number(f.minScore)
+  if (Number(f.minRating) > 0) params.minRating = Number(f.minRating)
+  if (f.skill.trim()) params.skill = f.skill.trim()
+  if (f.location.trim()) params.location = f.location.trim()
+  if (f.shift) params.shift = f.shift
+  if (f.applicationStatus) params.applicationStatus = f.applicationStatus
+  return params
+}
+
 export default function RecommendedCandidates() {
   const { jobId }   = useParams()
   const navigate    = useNavigate()
   const [candidates, setCandidates] = useState([])
   const [selected, setSelected]     = useState([])
   const [loading, setLoading]       = useState(true)
+  const [filtering, setFiltering]   = useState(false)
   const [error, setError]           = useState('')
   const [viewingId, setViewingId]   = useState(null)
   const [viewingBreakdown, setViewingBreakdown] = useState(null)
-  const [filters, setFilters]       = useState({ minScore: 0, minRating: 0 })
+  const [filters, setFilters]       = useState(DEFAULT_CANDIDATE_FILTERS)
   const [appStatuses, setAppStatuses] = useState({}) // keyed by candidateId
+  const [statusBusy, setStatusBusy] = useState(null)
+  const requestSeq = useRef(0)
+  const initialLoadComplete = useRef(false)
 
-  useEffect(() => {
-    employerApi.getCandidates(jobId)
-      .then(res => setCandidates(res.data.data))
-      .catch(() => setError('Could not load candidates.'))
-      .finally(() => setLoading(false))
+  const loadCandidates = useCallback((nextFilters, mode = 'filter') => {
+    const requestId = ++requestSeq.current
+    const isInitial = mode === 'initial'
+    if (isInitial) setLoading(true)
+    else setFiltering(true)
+    setError('')
+    return employerApi.getCandidates(jobId, buildCandidateFilterParams(nextFilters))
+      .then(res => {
+        if (requestId !== requestSeq.current) return
+        const data = res.data.data ?? []
+        setCandidates(data)
+        const map = {}
+        data.forEach(c => { map[c.candidateId] = c.status })
+        setAppStatuses(map)
+        setSelected(prev => prev.filter(id => data.some(c => c.candidateId === id)))
+      })
+      .catch(() => {
+        if (requestId === requestSeq.current) setError('Could not load candidates.')
+      })
+      .finally(() => {
+        if (requestId !== requestSeq.current) return
+        if (isInitial) setLoading(false)
+        setFiltering(false)
+        initialLoadComplete.current = true
+      })
   }, [jobId])
 
   useEffect(() => {
-    if (!jobId || candidates.length === 0) return
-    employerApi.getApplicationStatuses(jobId)
-      .then(res => {
-        const map = {}
-        ;(res.data.data ?? []).forEach(a => { map[a.candidateId] = a.status })
-        setAppStatuses(map)
-      })
-      .catch(() => {}) // non-critical
-  }, [jobId, candidates.length])
+    initialLoadComplete.current = false
+    setSelected([])
+    setFilters(DEFAULT_CANDIDATE_FILTERS)
+    loadCandidates(DEFAULT_CANDIDATE_FILTERS, 'initial')
+  }, [jobId, loadCandidates])
+
+  useEffect(() => {
+    if (!initialLoadComplete.current) return undefined
+    const timeoutId = window.setTimeout(() => {
+      loadCandidates(filters, 'filter')
+    }, 300)
+    return () => window.clearTimeout(timeoutId)
+  }, [filters, loadCandidates])
+
+  const searchWith = (partial) => {
+    setFilters(current => ({ ...current, ...partial }))
+  }
 
   const toggle    = id => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
   const toggleAll = () => setSelected(s => s.length === candidates.length ? [] : candidates.map(c => c.candidateId))
@@ -189,10 +241,17 @@ export default function RecommendedCandidates() {
     navigate(`/employer/schedule/${jobId}`, { state: { selectedIds: selected } })
   }
 
-  const filtered = candidates.filter(c =>
-    c.matchScore >= filters.minScore &&
-    c.averageRating >= filters.minRating
-  )
+  const updateApplicationStatus = async (candidateId, status) => {
+    setStatusBusy(candidateId + ':' + status)
+    try {
+      await employerApi.updateApplicationStatus(jobId, candidateId, status)
+      await loadCandidates(filters, 'filter')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not update application status.')
+    } finally {
+      setStatusBusy(null)
+    }
+  }
 
   return (
     <>
@@ -240,6 +299,88 @@ export default function RecommendedCandidates() {
         </div>
       )}
 
+      {/* Filter bar */}
+      {!loading && !error && (
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, padding: '10px 14px', background: '#111827', borderRadius: 10, border: '1px solid #1F2937' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Min ATS %</label>
+            <input
+              type="number" min="0" max="100" inputMode="numeric"
+              value={filters.minScore}
+              onChange={e => searchWith({ minScore: e.target.value })}
+              style={{ width: 60, padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Min Rating</label>
+            <select
+              value={filters.minRating}
+              onChange={e => searchWith({ minRating: e.target.value })}
+              style={{ padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
+            >
+              <option value="">Any</option>
+              <option value="1">1★+</option>
+              <option value="2">2★+</option>
+              <option value="3">3★+</option>
+              <option value="4">4★+</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Skill</label>
+            <input
+              type="text" placeholder="Java"
+              value={filters.skill}
+              onChange={e => searchWith({ skill: e.target.value })}
+              style={{ width: 90, padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Location</label>
+            <input
+              type="text" placeholder="Lahore"
+              value={filters.location}
+              onChange={e => searchWith({ location: e.target.value })}
+              style={{ width: 90, padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Shift</label>
+            <select
+              value={filters.shift}
+              onChange={e => searchWith({ shift: e.target.value })}
+              style={{ padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
+            >
+              <option value="">Any</option>
+              <option value="DAY">Day</option>
+              <option value="NIGHT">Night</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Status</label>
+            <select
+              value={filters.applicationStatus}
+              onChange={e => searchWith({ applicationStatus: e.target.value })}
+              style={{ padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
+            >
+              <option value="">Any</option>
+              {['RECOMMENDED', 'SHORTLISTED', 'SCHEDULED', 'CONFIRMED', 'COMPLETED', 'REVIEWED', 'HIRED', 'REJECTED'].map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFilters(DEFAULT_CANDIDATE_FILTERS)}
+            style={{ padding: '4px 10px', background: 'transparent', border: '1px solid #374151', borderRadius: 6, color: '#6B7280', fontSize: '0.75rem', cursor: 'pointer' }}
+          >
+            Clear
+          </button>
+          <span style={{ color: '#4B5563', fontSize: '0.72rem', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+            Showing {candidates.length}
+          </span>
+        </div>
+      )}
+
       {/* Empty */}
       {!loading && candidates.length === 0 && !error && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '60px 0', textAlign: 'center' }}>
@@ -253,42 +394,6 @@ export default function RecommendedCandidates() {
       {/* List */}
       {!loading && candidates.length > 0 && (
         <>
-          {/* Filter bar */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, padding: '10px 14px', background: '#111827', borderRadius: 10, border: '1px solid #1F2937' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Min ATS %</label>
-              <input
-                type="number" min="0" max="100"
-                value={filters.minScore}
-                onChange={e => setFilters(f => ({ ...f, minScore: Number(e.target.value) }))}
-                style={{ width: 60, padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
-              />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <label style={{ color: '#6B7280', fontSize: '0.75rem' }}>Min Rating</label>
-              <select
-                value={filters.minRating}
-                onChange={e => setFilters(f => ({ ...f, minRating: Number(e.target.value) }))}
-                style={{ padding: '4px 8px', background: '#1F2937', border: '1px solid #374151', borderRadius: 6, color: '#E8EAF0', fontSize: '0.8rem' }}
-              >
-                <option value={0}>Any</option>
-                <option value={1}>1★+</option>
-                <option value={2}>2★+</option>
-                <option value={3}>3★+</option>
-                <option value={4}>4★+</option>
-              </select>
-            </div>
-            <button
-              onClick={() => setFilters({ minScore: 0, minRating: 0 })}
-              style={{ padding: '4px 10px', background: 'transparent', border: '1px solid #374151', borderRadius: 6, color: '#6B7280', fontSize: '0.75rem', cursor: 'pointer' }}
-            >
-              Clear
-            </button>
-            <span style={{ color: '#4B5563', fontSize: '0.72rem', marginLeft: 'auto' }}>
-              Showing {filtered.length} of {candidates.length}
-            </span>
-          </div>
-
           {/* Select all row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: '0.78rem', color: '#4B5563' }}>
@@ -308,7 +413,7 @@ export default function RecommendedCandidates() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {filtered.map((c, i) => {
+            {candidates.map((c, i) => {
               const isSelected = selected.includes(c.candidateId)
               return (
                 <div
@@ -395,6 +500,35 @@ export default function RecommendedCandidates() {
                       {appStatuses[c.candidateId]}
                     </span>
                   )}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); updateApplicationStatus(c.candidateId, 'SHORTLISTED') }}
+                      disabled={statusBusy !== null || appStatuses[c.candidateId] === 'SHORTLISTED' || appStatuses[c.candidateId] === 'HIRED'}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        padding: '5px 8px', borderRadius: 8,
+                        background: 'rgba(46,229,176,0.06)', border: '1px solid rgba(46,229,176,0.18)',
+                        color: '#2EE5B0', fontSize: '0.7rem', cursor: statusBusy ? 'not-allowed' : 'pointer',
+                        opacity: appStatuses[c.candidateId] === 'SHORTLISTED' || appStatuses[c.candidateId] === 'HIRED' ? 0.45 : 1,
+                      }}
+                    >
+                      <CheckSquare size={12} /> Shortlist
+                    </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); updateApplicationStatus(c.candidateId, 'REJECTED') }}
+                      disabled={statusBusy !== null || appStatuses[c.candidateId] === 'REJECTED' || appStatuses[c.candidateId] === 'HIRED'}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        padding: '5px 8px', borderRadius: 8,
+                        background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)',
+                        color: '#FCA5A5', fontSize: '0.7rem', cursor: statusBusy ? 'not-allowed' : 'pointer',
+                        opacity: appStatuses[c.candidateId] === 'REJECTED' || appStatuses[c.candidateId] === 'HIRED' ? 0.45 : 1,
+                      }}
+                    >
+                      <X size={12} /> Reject
+                    </button>
+                  </div>
 
                   {/* View profile */}
                   <button

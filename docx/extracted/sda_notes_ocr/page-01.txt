@@ -1,0 +1,29 @@
+~ Software dlustan R firchiteckture att all
+No le taginarsing cycle : Inc RE A | pa Dt wD/p) oe Ad eeZZe 4
+Mags ute > s/w vs logicalentity urtitahaclwas , j fun ofl
+EB Complexity —>nature | Profess/o7cd indbuatap teens t, :
+—™~S longe in size Hw alsin
+; pee pic: salaries “oP ueioCeneiylt
+mS. negative chukehadus: interested in fai pryer:
+~~ Delon conapts ’
+|- Abstrachon= ibis selective examination. You feu op ip things ;
+~  levery ime slat for olesiones s ane! helps in complxity .
+ss 2+ Infosmaton hioling jerexpsutetion hick. dohe sbucture 4 our afgooitamn F
+~ 3-Moclw asify: We split s/w into cliffeunk comporonks « 4
+3 every moduyhe talks to all othe moduliz exept jRelf NCn-)
+=F. st C3 asmoduls incre aces | inkegradtor 2
+—s zane thes one module. lame mp owe
+N
+—~
+2 -tihla
+L, cohesion! -dogur of single mindedness: aloes onty 4 thing conephualy
+—O 5. Refackotng : improve internad stuchise without meclF4 "an ex fornaX
+— bhaviot ve move <?dundantcocle .
+mig ® (step ice) Refremink cabins cfeyos gradually
+“ig” P ake ons: jovd oti gris ure pattecns We can reuse aspe ok of ofasigns .
+B\ ack box clesigns ton epks 4, prindples Cunivess at> if
+—s ve quirements — Viren Ye Sriecty ae Chigh® level alesign XHLD) an
+urowiedy (3 ~ “Depleymuné lever design ; a
+_e fallerns 3 5 /ples ;
+— : 7 - 5
+CB camscanner

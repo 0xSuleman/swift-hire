@@ -5,10 +5,13 @@ import { Loader2, Briefcase } from 'lucide-react'
 
 const STATUS_STYLE = {
   RECOMMENDED: { label: 'Recommended', bg: '#1F2937', color: '#6B7280', border: '#374151' },
+  SHORTLISTED: { label: 'Shortlisted', bg: '#2EE5B015', color: '#2EE5B0', border: '#2EE5B030' },
   SCHEDULED:   { label: 'Scheduled',   bg: '#F59E0B15', color: '#F59E0B', border: '#F59E0B30' },
   CONFIRMED:   { label: 'Confirmed',   bg: '#2EE5B015', color: '#2EE5B0', border: '#2EE5B030' },
   COMPLETED:   { label: 'Completed',   bg: '#818CF815', color: '#818CF8', border: '#818CF830' },
+  REVIEWED:    { label: 'Reviewed',    bg: '#818CF815', color: '#818CF8', border: '#818CF830' },
   HIRED:       { label: 'Hired 🎉',    bg: '#34D39915', color: '#34D399', border: '#34D39930' },
+  REJECTED:    { label: 'Rejected',    bg: '#EF444415', color: '#FCA5A5', border: '#EF444430' },
 }
 
 export default function MyApplications() {

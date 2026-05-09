@@ -7,6 +7,7 @@ const CATEGORIES = [
   { value: 'users',     label: 'Users' },
   { value: 'jobs',      label: 'Jobs' },
   { value: 'ratings',   label: 'Ratings' },
+  { value: 'ats',       label: 'ATS' },
   { value: 'analytics',     label: 'Analytics' },
   { value: 'notifications', label: 'Notifications' },
 ]
@@ -111,7 +112,7 @@ function HistoryRow({ entry }) {
 }
 
 export default function SystemReports() {
-  const [params, setParams]     = useState({ category: 'users', from: '', to: '', userType: '' })
+  const [params, setParams]     = useState({ category: 'users', from: '', to: '', userType: '', atsThreshold: 50 })
   const [report, setReport]     = useState(null)
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
@@ -151,37 +152,23 @@ export default function SystemReports() {
       ? arr.filter(r => Object.values(r).some(v => String(v ?? '').toLowerCase().includes(tableFilter.toLowerCase())))
       : arr
 
-  const exportCsv = () => {
+  const exportCsv = async () => {
     if (!report) { setError('Generate a report first.'); return }
-    const sections = []
-    if (report.candidateRecords !== undefined) {
-      const rows = filterRecords(report.candidateRecords)
-      if (rows.length > 0) sections.push({ header: 'CANDIDATES', rows })
+    setExporting(true)
+    setError('')
+    try {
+      const res = await adminApi.exportReport(params)
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `report-${params.category}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not export report.')
+    } finally {
+      setExporting(false)
     }
-    if (report.employerRecords !== undefined) {
-      const rows = filterRecords(report.employerRecords)
-      if (rows.length > 0) sections.push({ header: 'EMPLOYERS', rows })
-    }
-    if (report.records !== undefined) {
-      const rows = filterRecords(report.records)
-      if (rows.length > 0) sections.push({ header: '', rows })
-    }
-    let csv = ''
-    sections.forEach(({ header, rows }, idx) => {
-      if (idx > 0) csv += '\n'
-      if (header) csv += header + '\n'
-      csv += Object.keys(rows[0]).join(',') + '\n'
-      rows.forEach(r => {
-        csv += Object.values(r).map(v => (v == null ? '' : String(v).replace(/,/g, ';'))).join(',') + '\n'
-      })
-    })
-    if (!csv) { setError('No records to export.'); return }
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `report-${params.category}${tableFilter ? '-filtered' : ''}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
   }
 
   const generate = async e => {
@@ -301,6 +288,20 @@ export default function SystemReports() {
                 </div>
               )}
 
+              {(params.category === 'ats' || params.category === 'analytics') && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>ATS Threshold</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={params.atsThreshold}
+                    onChange={e => setParams(p => ({ ...p, atsThreshold: Number(e.target.value) }))}
+                    style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, color: '#9CA3AF', padding: '8px 12px', fontSize: '0.82rem', outline: 'none', width: 120 }}
+                  />
+                </div>
+              )}
+
               {/* Date range */}
               <div className="two-col-grid" style={{ gap: 14 }}>
                 {[['from', 'From'], ['to', 'To']].map(([key, label]) => (
@@ -386,6 +387,14 @@ export default function SystemReports() {
               {/* Flat records (jobs) */}
               {records !== undefined && (
                 <ReportSection label="" color="#6B7280" records={filterRecords(records)} />
+              )}
+
+              {report.topCandidates !== undefined && (
+                <ReportSection label="Top Candidates" color="#2EE5B0" records={filterRecords(report.topCandidates)} />
+              )}
+
+              {report.belowThresholdCandidates !== undefined && (
+                <ReportSection label="Below Threshold" color="#F59E0B" records={filterRecords(report.belowThresholdCandidates)} />
               )}
             </div>
           )}

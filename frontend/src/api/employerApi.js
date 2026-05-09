@@ -4,7 +4,7 @@ export const employerApi = {
   getProfile:           ()               => api.get('/employer/profile'),
   updateProfile:        (data)           => api.put('/employer/profile', data),
   submitPrompt:         (prompt)         => api.post('/jobs/prompt', { prompt }),
-  getCandidates:        (jobId)          => api.get(`/jobs/${jobId}/candidates`),
+  getCandidates:        (jobId, params)  => api.get(`/jobs/${jobId}/candidates`, { params }),
   getMyJobs:            ()               => api.get('/jobs'),
   previewSchedule:      (data)           => api.post('/schedule/preview', data),
   scheduleBatch:        (data)           => api.post('/schedule/batch', data),
@@ -19,4 +19,5 @@ export const employerApi = {
   getSlot:              (slotId)         => api.get(`/schedule/slots/${slotId}`),
   hireCandidate:        (candidateId, jobPostingId) => api.post(`/employer/candidates/${candidateId}/hire`, { jobPostingId }),
   getApplicationStatuses: (jobId) => api.get(`/jobs/${jobId}/application-statuses`),
+  updateApplicationStatus: (jobId, candidateId, status) => api.patch(`/jobs/${jobId}/applications/${candidateId}/status`, { status }),
 }

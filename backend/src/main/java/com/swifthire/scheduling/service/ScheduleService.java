@@ -1,5 +1,7 @@
 package com.swifthire.scheduling.service;
 
+import com.swifthire.application.model.ApplicationStatus;
+import com.swifthire.application.service.ApplicationService;
 import com.swifthire.automation.service.EmailService;
 import com.swifthire.job.model.JobPosting;
 import com.swifthire.job.repository.JobPostingRepository;
@@ -37,6 +39,7 @@ public class ScheduleService {
     private final JobPostingRepository jobPostingRepository;
     private final EmployerRepository employerRepository;
     private final EmailService emailService;
+    private final ApplicationService applicationService;
 
     public record ScheduleResult(List<InterviewSlot> slots, boolean allEmailsSent) {}
 
@@ -154,6 +157,8 @@ public class ScheduleService {
                     .build();
 
             result.add(slotRepository.save(slot));
+            applicationService.changeStatus(candidate, job, ApplicationStatus.SCHEDULED,
+                    window.getEmployer().getUser().getEmail(), "SCHEDULE_CREATED");
 
             // UC-04: send invitations synchronously so we know if they succeeded
             boolean candidateSent = emailService.trySendInvitation(candidate.getUser().getEmail(),

@@ -1,5 +1,7 @@
 package com.swifthire.automation.scheduler;
 
+import com.swifthire.application.model.ApplicationStatus;
+import com.swifthire.application.service.ApplicationService;
 import com.swifthire.automation.model.NotificationLog;
 import com.swifthire.automation.repository.NotificationLogRepository;
 import com.swifthire.automation.service.EmailService;
@@ -29,6 +31,7 @@ public class ReminderScheduler {
     private final InterviewSlotRepository slotRepository;
     private final EmailService emailService;
     private final NotificationLogRepository notificationLogRepository;
+    private final ApplicationService applicationService;
 
     // Auto-completes interviews whose end time has passed and are still PENDING or CONFIRMED
     @Scheduled(cron = "0 * * * * *")
@@ -40,6 +43,8 @@ public class ReminderScheduler {
         for (InterviewSlot slot : expired) {
             slot.setStatus(InterviewSlot.SlotStatus.COMPLETED);
             slotRepository.save(slot);
+            applicationService.changeStatus(slot.getCandidate(), slot.getJobPosting(),
+                    ApplicationStatus.COMPLETED, null, "AUTO_COMPLETE");
             log.info("Auto-completed slot id={} for candidate={}",
                     slot.getId(), slot.getCandidate().getUser().getEmail());
         }

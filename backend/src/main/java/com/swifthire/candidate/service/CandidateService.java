@@ -1,5 +1,7 @@
 package com.swifthire.candidate.service;
 
+import com.swifthire.application.model.Application;
+import com.swifthire.application.service.ApplicationService;
 import com.swifthire.common.exception.ResourceNotFoundException;
 import com.swifthire.job.model.JobPosting;
 import com.swifthire.job.model.MatchScore;
@@ -35,6 +37,7 @@ public class CandidateService {
     private final MatchScoreRepository matchScoreRepository;
     private final AtsScoreService atsScoreService;
     private final InterviewSlotRepository slotRepository;
+    private final ApplicationService applicationService;
 
     @Value("${app.cv.upload-dir}")
     private String uploadDir;
@@ -134,7 +137,11 @@ public class CandidateService {
 
     // UC-11: Returns ranked job postings for this candidate
     // Scores this candidate against ALL open jobs on the fly — no employer action required.
-    public List<Map<String, Object>> getRecommendedJobs(String email) {
+    public List<Map<String, Object>> getRecommendedJobs(String email,
+                                                        String location,
+                                                        String shift,
+                                                        Double minMatchScore,
+                                                        String skill) {
         var user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
         var candidate = candidateRepository.findByUserId(user.getId())
@@ -148,8 +155,13 @@ public class CandidateService {
 
         List<ScoredJob> scored = jobPostingRepository.findByStatus(JobPosting.JobStatus.OPEN)
                 .stream()
+                .filter(job -> textContains(job.getLocation(), location) ||
+                        textContains(job.getEmployer().getCompanyLocation(), location))
+                .filter(job -> textEquals(job.getShift(), shift))
+                .filter(job -> textContains(job.getRequiredSkills(), skill))
                 .map(job -> new ScoredJob(job, atsScoreService.computeScore(candidate, job)))
                 .filter(s -> s.score() > 0)
+                .filter(s -> minMatchScore == null || s.score() >= minMatchScore)
                 .sorted(Comparator.comparingDouble(ScoredJob::score).reversed())
                 .toList();
 
@@ -174,7 +186,7 @@ public class CandidateService {
         return result;
     }
 
-    // UC-11 extended: Returns all jobs a candidate has been matched to, with derived status
+    // UC-11 extended: Returns all stored applications for a candidate with real persisted status.
     public List<Map<String, Object>> getMyApplications(String email) {
         var user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
@@ -182,36 +194,55 @@ public class CandidateService {
                 .orElseThrow(() -> new ResourceNotFoundException("Candidate profile not found."));
 
         List<MatchScore> scores = matchScoreRepository.findByCandidateOrderByMatchPercentageDesc(candidate);
+        applicationService.ensureRecommendedForScores(scores, email, "LEGACY_BACKFILL");
+        Map<Long, MatchScore> scoresByJobId = new LinkedHashMap<>();
+        scores.forEach(score -> scoresByJobId.put(score.getJobPosting().getId(), score));
+        List<Application> applications = applicationService.findByCandidate(candidate);
         List<InterviewSlot> allSlots = slotRepository.findByCandidate(candidate);
 
-        return scores.stream().map(ms -> {
-            JobPosting job = ms.getJobPosting();
+        return applications.stream()
+                .sorted(Comparator
+                        .comparingInt(this::applicationStatusPriority)
+                        .thenComparing(app -> Optional.ofNullable(app.getUpdatedAt()).orElse(app.getCreatedAt()), Comparator.reverseOrder()))
+                .map(app -> {
+            JobPosting job = app.getJobPosting();
+            MatchScore ms = scoresByJobId.get(job.getId());
             InterviewSlot slot = allSlots.stream()
                     .filter(s -> s.getJobPosting().getId().equals(job.getId()))
-                    .max(Comparator.comparing(s -> s.getStatus().ordinal()))
+                    .max((a, b) -> a.getStartTime().compareTo(b.getStartTime()))
                     .orElse(null);
-
-            String status = deriveStatus(candidate, slot);
 
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("jobId",        job.getId());
             m.put("jobTitle",     job.getJobTitle());
             m.put("companyName",  job.getEmployer().getCompanyName());
-            m.put("matchScore",   ms.getMatchPercentage());
-            m.put("status",       status);
+            m.put("matchScore",   ms != null ? ms.getMatchPercentage() : atsScoreService.computeScore(candidate, job));
+            m.put("status",       app.getStatus().name());
             m.put("interviewDate", slot != null ? slot.getStartTime().toString() : null);
             return m;
         }).toList();
     }
 
-    private String deriveStatus(Candidate candidate, InterviewSlot slot) {
-        if (candidate.getHiredAt() != null) return "HIRED";
-        if (slot == null) return "RECOMMENDED";
-        return switch (slot.getStatus()) {
-            case COMPLETED -> "COMPLETED";
-            case CONFIRMED -> "CONFIRMED";
-            case PENDING   -> "SCHEDULED";
-            default        -> "RECOMMENDED";
+    private int applicationStatusPriority(Application app) {
+        return switch (app.getStatus()) {
+            case SCHEDULED -> 0;
+            case CONFIRMED -> 1;
+            case SHORTLISTED -> 2;
+            case COMPLETED -> 3;
+            case REVIEWED -> 4;
+            case HIRED -> 5;
+            case REJECTED -> 6;
+            case RECOMMENDED -> 7;
         };
+    }
+
+    private boolean textContains(String value, String filter) {
+        if (filter == null || filter.isBlank()) return true;
+        return value != null && value.toLowerCase().contains(filter.trim().toLowerCase());
+    }
+
+    private boolean textEquals(String value, String filter) {
+        if (filter == null || filter.isBlank()) return true;
+        return value != null && value.equalsIgnoreCase(filter.trim());
     }
 }

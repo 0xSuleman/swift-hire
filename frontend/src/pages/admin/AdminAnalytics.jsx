@@ -78,6 +78,8 @@ export default function AdminAnalytics() {
     { label: 'Interviews',        value: d.totalInterviews ?? 0,                                                   Icon: CalendarDays,color: '#F59E0B' },
     { label: 'Hired Candidates',  value: d.hiredCandidates ?? 0,                                                   Icon: TrendingUp,  color: '#34D399' },
     { label: 'Platform Rating',   value: d.platformAverageRating != null ? d.platformAverageRating.toFixed(1) : '—', Icon: Star,      color: '#F59E0B', suffix: '/ 5' },
+    { label: 'Average ATS',       value: d.platformAverageAtsScore != null ? d.platformAverageAtsScore.toFixed(1) : '—', Icon: TrendingUp, color: '#2EE5B0', suffix: '%' },
+    { label: 'Below 50% ATS',     value: d.belowAtsThreshold ?? 0,                                                 Icon: Briefcase,   color: '#EF4444' },
     { label: 'Total Reviews',     value: d.totalReviews    ?? 0,                                                   Icon: MessageSquare, color: '#EF4444' },
   ]
 

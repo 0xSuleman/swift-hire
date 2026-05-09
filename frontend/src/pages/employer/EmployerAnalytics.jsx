@@ -69,6 +69,7 @@ export default function EmployerAnalytics() {
   const stats = [
     { label: 'Average Rating',   value: data?.averageRating?.toFixed(1) ?? '—', Icon: Star,       color: '#F59E0B', suffix: '/ 5' },
     { label: 'Total Reviews',    value: data?.totalRatings ?? 0,                Icon: Users,      color: '#818CF8', suffix: '' },
+    { label: 'Average ATS',      value: data?.averageAtsScore ?? '—',           Icon: TrendingUp, color: '#2EE5B0', suffix: '%' },
     { label: 'Avg Time to Hire', value: data?.avgTimeToHireDays ?? '—',         Icon: Clock,      color: '#2EE5B0', suffix: 'days' },
     { label: 'Acceptance Rate',  value: data?.acceptanceRate ?? 0,              Icon: TrendingUp, color: '#34D399', suffix: '%' },
   ]

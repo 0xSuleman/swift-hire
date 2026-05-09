@@ -1,5 +1,7 @@
 package com.swifthire.employer.service;
 
+import com.swifthire.application.model.ApplicationStatus;
+import com.swifthire.application.service.ApplicationService;
 import com.swifthire.automation.service.EmailService;
 import com.swifthire.common.exception.ResourceNotFoundException;
 import com.swifthire.job.model.JobPosting;
@@ -25,6 +27,7 @@ public class EmployerService {
     private final CandidateRepository candidateRepository;
     private final JobPostingRepository jobPostingRepository;
     private final EmailService emailService;
+    private final ApplicationService applicationService;
 
     public Map<String, Object> getProfile(String email) {
         var user = userRepository.findByEmail(email)
@@ -87,6 +90,8 @@ public class EmployerService {
         candidate.setHiredJobTitle(job.getJobTitle());
         candidate.setHiredEmployerEmail(empUser.getEmail());
         candidateRepository.save(candidate);
+        applicationService.changeStatus(candidate, job, ApplicationStatus.HIRED,
+                empUser.getEmail(), "HIRED");
 
         emailService.sendHireConfirmationToCandidate(
                 candidate.getUser().getEmail(), candidate.getUser().getName(),

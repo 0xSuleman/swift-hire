@@ -92,6 +92,8 @@ public class AnalyticsService {
         long acceptedSlots = 0;   // CONFIRMED + COMPLETED
         double timeToHireSum = 0;
         long timeToHireCount = 0;
+        double atsSum = 0;
+        long atsCount = 0;
 
         List<Map<String, Object>> perJob = new ArrayList<>();
 
@@ -111,6 +113,14 @@ public class AnalyticsService {
 
             totalSlots    += jobTotal;
             acceptedSlots += jobAccepted;
+
+            var jobScores = matchScoreRepository.findByJobPostingIdOrderByRankingAsc(job.getId());
+            double averageAts = jobScores.stream()
+                    .mapToDouble(com.swifthire.job.model.MatchScore::getMatchPercentage)
+                    .average()
+                    .orElse(0.0);
+            atsSum += jobScores.stream().mapToDouble(com.swifthire.job.model.MatchScore::getMatchPercentage).sum();
+            atsCount += jobScores.size();
 
             // Time-to-hire: fractional days from job creation to earliest confirmed/completed slot
             var earliest = slots.stream()
@@ -133,6 +143,8 @@ public class AnalyticsService {
             jobMap.put("totalSlots",     jobTotal);
             jobMap.put("acceptedSlots",  jobAccepted);
             jobMap.put("timeToHireDays", jobTimeToHire);
+            jobMap.put("averageAtsScore", Math.round(averageAts * 10.0) / 10.0);
+            jobMap.put("belowAtsThreshold", jobScores.stream().filter(ms -> ms.getMatchPercentage() < 50.0).count());
             perJob.add(jobMap);
         }
 
@@ -141,6 +153,9 @@ public class AnalyticsService {
                 : 0.0;
         double avgTimeToHire = timeToHireCount > 0
                 ? Math.round((double) timeToHireSum / timeToHireCount * 10) / 10.0
+                : 0.0;
+        double avgAtsScore = atsCount > 0
+                ? Math.round(atsSum / atsCount * 10) / 10.0
                 : 0.0;
 
         // Job status counts
@@ -159,6 +174,7 @@ public class AnalyticsService {
         result.put("totalInterviews",   totalSlots);
         result.put("acceptanceRate",    acceptanceRate);
         result.put("avgTimeToHireDays", avgTimeToHire);
+        result.put("averageAtsScore",   avgAtsScore);
         result.put("jobBreakdown",      perJob);
         result.put("jobStatusCounts",   jobStatusCounts);
         result.put("ratingsBreakdown",  buildRatingsBreakdown(user));
