@@ -123,6 +123,7 @@ export default function SystemReports() {
   const [tableFilter, setTableFilter] = useState('')
   const [notifLogs, setNotifLogs] = useState([])
   const [notifLoading, setNotifLoading] = useState(false)
+  const [notifGenerated, setNotifGenerated] = useState(false)
 
   const loadHistory = async () => {
     setHistoryLoading(true)
@@ -153,6 +154,21 @@ export default function SystemReports() {
       : arr
 
   const exportCsv = async () => {
+    if (params.category === 'notifications') {
+      if (notifLogs.length === 0) { setError('No notification logs to export.'); return }
+      const headers = ['id', 'recipientEmail', 'eventType', 'status', 'sentAt', 'errorMessage']
+      const rows = notifLogs.map(log =>
+        headers.map(h => `"${String(log[h] ?? '').replace(/"/g, '""')}"`).join(',')
+      )
+      const csv = [headers.join(','), ...rows].join('\n')
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'report-notifications.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+      return
+    }
     if (!report) { setError('Generate a report first.'); return }
     setExporting(true)
     setError('')
@@ -174,6 +190,20 @@ export default function SystemReports() {
   const generate = async e => {
     e.preventDefault()
     setError('')
+
+    if (params.category === 'notifications') {
+      setNotifLoading(true)
+      try {
+        const res = await adminApi.getNotificationLogs()
+        setNotifLogs(res.data.data ?? [])
+        setNotifGenerated(true)
+      } catch {
+        setError('Could not load notification logs.')
+      } finally {
+        setNotifLoading(false)
+      }
+      return
+    }
 
     if (params.from && params.from > TODAY) {
       setError('The "From" date cannot be in the future.')
@@ -250,7 +280,7 @@ export default function SystemReports() {
                   {CATEGORIES.map(({ value, label }) => {
                     const active = params.category === value
                     return (
-                      <button key={value} type="button" onClick={() => setParams(p => ({ ...p, category: value, userType: '' }))}
+                      <button key={value} type="button" onClick={() => { setParams(p => ({ ...p, category: value, userType: '' })); setReport(null); setError(''); setNotifGenerated(false) }}
                         style={{
                           padding: '7px 16px', borderRadius: 9999, fontSize: '0.82rem', fontWeight: 500,
                           border: `1px solid ${active ? 'rgba(46,229,176,0.4)' : 'rgba(255,255,255,0.07)'}`,
@@ -411,9 +441,19 @@ export default function SystemReports() {
           {/* Notifications panel */}
           {params.category === 'notifications' && (
             <div className="app-card" style={{ marginTop: 16 }}>
-              <p style={{ color: '#6B7280', fontSize: '0.82rem', marginBottom: 14 }}>
-                All email notification events — invitations and reminders.
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <p style={{ color: '#6B7280', fontSize: '0.82rem', margin: 0 }}>
+                  All email notification events — invitations and reminders.
+                </p>
+                {notifGenerated && notifLogs.length > 0 && (
+                  <button onClick={exportCsv}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: '#6B7280', fontSize: '0.75rem', cursor: 'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#9CA3AF'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}>
+                    <Download size={12} /> Export CSV
+                  </button>
+                )}
+              </div>
               {notifLoading ? (
                 <div style={{ color: '#4B5563', fontSize: '0.85rem' }}>Loading...</div>
               ) : notifLogs.length === 0 ? (

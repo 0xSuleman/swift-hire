@@ -104,7 +104,7 @@ public class JobService {
 
         return scores.stream()
                 .filter(ms -> ms.getJobPosting().getId().equals(job.getId()))
-                .filter(ms -> minAtsScore == null || ms.getMatchPercentage() >= minAtsScore)
+                .filter(ms -> minAtsScore == null || ms.getMatchPercentage() >= minAtsScore - 0.05)
                 .filter(ms -> minRating == null || ms.getCandidate().getUser().getAverageRating() >= minRating)
                 .filter(ms -> textContains(ms.getCandidate().getParsedSkills(), skill))
                 .filter(ms -> textContains(ms.getCandidate().getPreferredLocation(), location))
@@ -114,7 +114,6 @@ public class JobService {
                     Application app = applications.get(ms.getCandidate().getId());
                     return app != null && app.getStatus() == statusFilter;
                 })
-                .limit(10)
                 .map(ms -> {
             Candidate c = ms.getCandidate();
             c.setProfileViews(c.getProfileViews() + 1);

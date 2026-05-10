@@ -1,6 +1,5 @@
 -- =============================================================
 -- Swift Hire -- Demo Seed Data
--- Generated: 2026-05-10 (verified, clean local DB)
 -- Run:  mysql -u root swift_hire < seed.sql
 --
 -- Safe to re-run: all statements use INSERT IGNORE.

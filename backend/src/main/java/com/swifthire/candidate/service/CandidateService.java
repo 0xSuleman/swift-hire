@@ -189,7 +189,7 @@ public class CandidateService {
                 .filter(job -> textContains(job.getRequiredSkills(), skill))
                 .map(job -> new ScoredJob(job, atsScoreService.computeScore(candidate, job)))
                 .filter(s -> s.score() > 0)
-                .filter(s -> minMatchScore == null || s.score() >= minMatchScore)
+                .filter(s -> minMatchScore == null || s.score() >= minMatchScore - 0.05)
                 .sorted(Comparator.comparingDouble(ScoredJob::score).reversed())
                 .toList();
 
