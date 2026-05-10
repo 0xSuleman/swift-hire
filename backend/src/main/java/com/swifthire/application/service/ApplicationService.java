@@ -97,6 +97,10 @@ public class ApplicationService {
         return applicationRepository.findByCandidateOrderByUpdatedAtDesc(candidate);
     }
 
+    public List<ApplicationStatusHistory> findStatusHistory(Application application) {
+        return historyRepository.findByApplicationOrderByChangedAtDesc(application);
+    }
+
     public List<Application> findHiredApplications() {
         return applicationRepository.findByStatusIn(List.of(ApplicationStatus.HIRED));
     }

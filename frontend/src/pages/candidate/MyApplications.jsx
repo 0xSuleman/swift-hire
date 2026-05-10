@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { candidateApi } from '../../api/candidateApi'
 import AppLayout from '../../components/common/AppLayout'
-import { Loader2, Briefcase } from 'lucide-react'
+import { Loader2, Briefcase, Eye, X } from 'lucide-react'
 
 const STATUS_STYLE = {
   RECOMMENDED: { label: 'Recommended', bg: '#1F2937', color: '#6B7280', border: '#374151' },
@@ -14,10 +14,100 @@ const STATUS_STYLE = {
   REJECTED:    { label: 'Rejected',    bg: '#EF444415', color: '#FCA5A5', border: '#EF444430' },
 }
 
+function formatDate(value) {
+  return value ? new Date(value).toLocaleString() : 'Not scheduled'
+}
+
+function DetailRow({ label, value }) {
+  return (
+    <div>
+      <p style={{ margin: '0 0 3px', color: '#4B5563', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
+      <p style={{ margin: 0, color: '#9CA3AF', fontSize: '0.82rem', lineHeight: 1.5 }}>{value || 'Not specified'}</p>
+    </div>
+  )
+}
+
+function ApplicationDetailsModal({ app, onClose }) {
+  if (!app) return null
+  const st = STATUS_STYLE[app.status] ?? STATUS_STYLE.RECOMMENDED
+  const skills = (app.requiredSkills || '').split(',').map(s => s.trim()).filter(Boolean)
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 20 }}
+      onClick={onClose}
+    >
+      <div
+        className="app-card"
+        style={{ width: '100%', maxWidth: 620, maxHeight: '86vh', overflowY: 'auto', padding: 24 }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14, marginBottom: 18 }}>
+          <div>
+            <p style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 700, color: '#E8EAF0' }}>{app.jobTitle}</p>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#6B7280' }}>{app.companyName}</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#4B5563', cursor: 'pointer', padding: 4, display: 'flex' }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
+          <span style={{ color: '#2EE5B0', fontWeight: 700, fontSize: '0.95rem' }}>{Math.round(app.matchScore)}% match</span>
+          <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, background: st.bg, color: st.color, border: `1px solid ${st.border}` }}>
+            {st.label}
+          </span>
+          {app.jobStatus && <span style={{ color: '#6B7280', fontSize: '0.78rem' }}>Job: {app.jobStatus}</span>}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 18 }}>
+          <DetailRow label="Location" value={app.location || app.companyLocation} />
+          <DetailRow label="Shift" value={app.shift} />
+          <DetailRow label="Experience" value={app.experienceYears != null ? `${app.experienceYears}+ years` : ''} />
+          <DetailRow label="Applied / Matched" value={formatDate(app.applicationCreatedAt)} />
+          <DetailRow label="Last Status Update" value={formatDate(app.applicationUpdatedAt)} />
+          <DetailRow label="Interview" value={app.interviewDate ? `${formatDate(app.interviewDate)}${app.interviewStatus ? ` · ${app.interviewStatus}` : ''}` : ''} />
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <p style={{ margin: '0 0 8px', color: '#4B5563', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Required Skills</p>
+          {skills.length > 0 ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {skills.map(skill => (
+                <span key={skill} style={{ padding: '3px 10px', borderRadius: 9999, background: 'rgba(46,229,176,0.08)', border: '1px solid rgba(46,229,176,0.18)', color: '#2EE5B0', fontSize: '0.74rem' }}>{skill}</span>
+              ))}
+            </div>
+          ) : (
+            <p style={{ margin: 0, color: '#6B7280', fontSize: '0.82rem' }}>No required skills listed.</p>
+          )}
+        </div>
+
+        {app.statusHistory?.length > 0 && (
+          <div>
+            <p style={{ margin: '0 0 8px', color: '#4B5563', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status History</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {app.statusHistory.map((item, index) => (
+                <div key={`${item.newStatus}-${item.changedAt}-${index}`} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#2EE5B0', marginTop: 6, flexShrink: 0 }} />
+                  <div>
+                    <p style={{ margin: '0 0 2px', color: '#E8EAF0', fontSize: '0.8rem' }}>{item.previousStatus || 'Created'} to {item.newStatus}</p>
+                    <p style={{ margin: 0, color: '#4B5563', fontSize: '0.72rem' }}>{formatDate(item.changedAt)}{item.source ? ` · ${item.source}` : ''}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function MyApplications() {
   const [apps, setApps]       = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
+  const [selectedApp, setSelectedApp] = useState(null)
 
   useEffect(() => {
     candidateApi.getMyApplications()
@@ -28,6 +118,8 @@ export default function MyApplications() {
 
   return (
     <AppLayout>
+      {selectedApp && <ApplicationDetailsModal app={selectedApp} onClose={() => setSelectedApp(null)} />}
+
       <div className="page-header">
         <h1 className="page-title">My Applications</h1>
         <p className="page-subtitle">Track your progress across all job matches.</p>
@@ -74,6 +166,14 @@ export default function MyApplications() {
                   }}>
                     {st.label}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedApp(app)}
+                    title="View application details"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 9, background: 'rgba(129,140,248,0.08)', border: '1px solid rgba(129,140,248,0.2)', color: '#818CF8', cursor: 'pointer' }}
+                  >
+                    <Eye size={14} />
+                  </button>
                 </div>
               </div>
             )

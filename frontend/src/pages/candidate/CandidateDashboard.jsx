@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { candidateApi } from '../../api/candidateApi'
 import AppLayout from '../../components/common/AppLayout'
-import { User, Briefcase, BarChart2, ArrowRight, CheckCircle2, Mail } from 'lucide-react'
+import { User, Briefcase, BarChart2, ArrowRight, CheckCircle2, Mail, CalendarDays, ClipboardList } from 'lucide-react'
 
 const QUICK_LINKS = [
-  { label: 'Complete Profile',      desc: 'Upload your CV and set preferences',  to: '/candidate/profile',   Icon: User,     color: '#2EE5B0' },
-  { label: 'Browse Job Postings',   desc: 'See roles matched to your skills',    to: '/candidate/jobs',      Icon: Briefcase, color: '#818CF8' },
-  { label: 'View Analytics',        desc: 'Profile views and interview stats',   to: '/candidate/analytics', Icon: BarChart2, color: '#F59E0B' },
+  { label: 'Complete Profile',    desc: 'Edit details, skills, and CV',       to: '/candidate/profile',      Icon: User,          color: '#2EE5B0' },
+  { label: 'Browse Jobs',         desc: 'See roles matched to your skills',    to: '/candidate/jobs',         Icon: Briefcase,     color: '#818CF8' },
+  { label: 'Interviews',          desc: 'Confirm and track interview slots',   to: '/candidate/interviews',   Icon: CalendarDays,  color: '#F59E0B' },
+  { label: 'Applications',        desc: 'Review application status history',   to: '/candidate/applications', Icon: ClipboardList, color: '#38BDF8' },
+  { label: 'View Analytics',      desc: 'Profile views and interview stats',   to: '/candidate/analytics',    Icon: BarChart2,     color: '#A78BFA' },
 ]
 
 export default function CandidateDashboard() {

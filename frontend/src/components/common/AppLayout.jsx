@@ -12,8 +12,8 @@ const NAV = {
     { to: '/candidate/profile',      label: 'My Profile',   Icon: User },
     { to: '/candidate/jobs',         label: 'Job Postings', Icon: Briefcase },
     { to: '/candidate/interviews',   label: 'Interviews',   Icon: CalendarDays },
-    { to: '/candidate/analytics',    label: 'Analytics',    Icon: BarChart2 },
     { to: '/candidate/applications', label: 'Applications', Icon: ClipboardList },
+    { to: '/candidate/analytics',    label: 'Analytics',    Icon: BarChart2 },
   ],
   EMPLOYER: [
     { to: '/employer',               label: 'Dashboard',    Icon: LayoutDashboard },

@@ -145,7 +145,7 @@ export default function MyJobs() {
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <th style={TH}>Job Title</th>
                 <th style={TH}>Status</th>
-                <th style={TH}>ATS</th>
+                <th style={TH}>Average ATS</th>
                 <th style={TH}>Posted</th>
                 <th style={TH}>Actions</th>
               </tr>

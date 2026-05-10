@@ -30,11 +30,11 @@ public class CandidateController {
 
     // UC-08: Update basic profile info
     @PutMapping("/profile")
-    public ResponseEntity<ApiResponse<Void>> updateProfile(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateProfile(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody Map<String, String> updates) {
-        candidateService.updateProfile(userDetails.getUsername(), updates);
-        return ResponseEntity.ok(ApiResponse.ok("Profile updated successfully.", null));
+        return ResponseEntity.ok(ApiResponse.ok("Profile updated successfully.",
+                candidateService.updateProfile(userDetails.getUsername(), updates)));
     }
 
     // UC-09: Upload CV (PDF only, ≤10MB)
