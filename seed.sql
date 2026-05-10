@@ -304,6 +304,11 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 UPDATE `hiring_prompts`
+SET `job_posting_id` = NULL
+WHERE `job_posting_id` IN (1, 2, 3, 4, 5)
+  AND `id` NOT IN (1, 2, 3, 4, 5);
+
+UPDATE `hiring_prompts`
 SET `job_posting_id` = 1,
     `parsed_skills` = 'Java,Spring Boot,Microservices,Docker,REST API,MySQL,Git',
     `parsed_location` = 'Lahore',
@@ -1324,6 +1329,519 @@ UNION ALL SELECT a.`id`, NULL, 'RECOMMENDED', 'system@swifthire.local', 'ATS_MAT
 UNION ALL SELECT a.`id`, NULL, 'RECOMMENDED', 'system@swifthire.local', 'ATS_MATCH', '2026-04-27 12:00:00.000000' FROM `applications` a WHERE a.`candidate_id` = 242 AND a.`job_posting_id` = 117
 UNION ALL SELECT a.`id`, NULL, 'RECOMMENDED', 'system@swifthire.local', 'ATS_MATCH', '2026-04-12 17:20:00.000000' FROM `applications` a WHERE a.`candidate_id` = 242 AND a.`job_posting_id` = 7
 UNION ALL SELECT a.`id`, 'RECOMMENDED', 'REJECTED', 'ali.raza@netsol.com', 'EMPLOYER_ACTION', '2026-04-15 15:30:00.000000' FROM `applications` a WHERE a.`candidate_id` = 242 AND a.`job_posting_id` = 7;
+-- ----------------------------------------------------------------------
+-- Final Pakistan-context seed enrichment for the P1/P2 feature set.
+-- This block is intentionally idempotent: it fills gaps left by older
+-- seed rows and keeps hiring prompts, applications, ATS, reports, and
+-- user profile data useful after a fresh import.
+-- ----------------------------------------------------------------------
+
+UPDATE users
+SET
+  name = CASE id
+    WHEN 309 THEN 'Danish Mehmood'
+    WHEN 310 THEN 'Waleed Shahbaz'
+    WHEN 311 THEN 'Waleed Shahbaz'
+    WHEN 312 THEN 'Ammar Arif'
+    WHEN 313 THEN 'Ammar Arif'
+    WHEN 314 THEN 'Mahnoor Iqbal'
+    WHEN 315 THEN 'Muneeb Khalid'
+    WHEN 316 THEN 'Mehran Iqbal'
+    WHEN 317 THEN 'Zeeshan Javed'
+    WHEN 318 THEN 'Taimoor Waseem'
+    WHEN 319 THEN 'Hamdan Sheikh'
+    ELSE name
+  END,
+  email = CASE id
+    WHEN 309 THEN 'danish.mehmood@gmail.com'
+    WHEN 310 THEN 'waleed.shahbaz@gmail.com'
+    WHEN 311 THEN 'waleed.shahbaz@bytecraft.pk'
+    WHEN 312 THEN 'ammar.arif@gmail.com'
+    WHEN 313 THEN 'ammar.arif.dev@gmail.com'
+    WHEN 314 THEN 'mahnoor.iqbal@crescenttech.pk'
+    WHEN 315 THEN 'muneeb.khalid@paksoft.io'
+    WHEN 316 THEN 'mehran.iqbal@gmail.com'
+    WHEN 317 THEN 'zeeshan.javed.qa@gmail.com'
+    WHEN 318 THEN 'taimoor.waseem@gmail.com'
+    WHEN 319 THEN 'hamdan.sheikh@gmail.com'
+    ELSE email
+  END,
+  phone_no = CASE
+    WHEN phone_no IS NULL OR TRIM(phone_no) = '' THEN CONCAT('+92-3', LPAD(MOD(id * 37, 100), 2, '0'), '-', LPAD(MOD(id * 9173, 10000000), 7, '0'))
+    ELSE phone_no
+  END,
+  address = CASE
+    WHEN address IS NULL OR TRIM(address) = '' THEN
+      CASE MOD(id, 8)
+        WHEN 0 THEN 'Gulberg III, Lahore, Pakistan'
+        WHEN 1 THEN 'DHA Phase 5, Lahore, Pakistan'
+        WHEN 2 THEN 'Clifton, Karachi, Pakistan'
+        WHEN 3 THEN 'G-11, Islamabad, Pakistan'
+        WHEN 4 THEN 'Bahria Town, Rawalpindi, Pakistan'
+        WHEN 5 THEN 'Model Town, Lahore, Pakistan'
+        WHEN 6 THEN 'University Road, Peshawar, Pakistan'
+        ELSE 'Satellite Town, Faisalabad, Pakistan'
+      END
+    ELSE address
+  END,
+  email_verified = 1,
+  failed_login_attempts = COALESCE(failed_login_attempts, 0),
+  verification_token = COALESCE(NULLIF(verification_token, ''), CONCAT('seed-token-', id)),
+  verification_token_expiry = COALESCE(verification_token_expiry, '2026-06-30 23:59:59.000000'),
+  updated_at = COALESCE(updated_at, '2026-05-01 10:00:00.000000')
+WHERE role IN ('ADMIN', 'EMPLOYER', 'CANDIDATE');
+
+UPDATE users
+SET
+  average_rating = CASE
+    WHEN account_status = 'BANNED' THEN ROUND(2.0 + (MOD(id, 8) / 10), 1)
+    WHEN account_status = 'DEACTIVATED' THEN ROUND(2.8 + (MOD(id, 7) / 10), 1)
+    ELSE ROUND(3.6 + (MOD(id, 15) / 10), 1)
+  END,
+  total_ratings = GREATEST(COALESCE(total_ratings, 0), 3 + MOD(id, 18))
+WHERE role IN ('EMPLOYER', 'CANDIDATE');
+
+UPDATE employers
+SET
+  company_name = CASE id
+    WHEN 101 THEN 'TechVista Solutions'
+    WHEN 102 THEN 'Arbisoft'
+    WHEN 103 THEN 'Systems Limited'
+    WHEN 104 THEN 'NetSol Technologies'
+    WHEN 105 THEN 'Folio3'
+    WHEN 106 THEN 'Contour Software'
+    WHEN 107 THEN '10Pearls'
+    WHEN 108 THEN 'Confiz'
+    WHEN 109 THEN 'VentureDive'
+    WHEN 110 THEN 'Tkxel'
+    WHEN 111 THEN 'Devsinc'
+    WHEN 112 THEN 'Navicosoft'
+    WHEN 113 THEN 'Programmers Force'
+    WHEN 114 THEN 'Xgrid'
+    WHEN 115 THEN 'InvoZone'
+    WHEN 311 THEN 'ByteCraft Labs'
+    WHEN 314 THEN 'CrescentTech'
+    WHEN 315 THEN 'PakSoft Solutions'
+    ELSE company_name
+  END,
+  company_location = CASE id
+    WHEN 101 THEN 'Lahore, Pakistan'
+    WHEN 102 THEN 'Karachi, Pakistan'
+    WHEN 103 THEN 'Islamabad, Pakistan'
+    WHEN 104 THEN 'Lahore, Pakistan'
+    WHEN 105 THEN 'Karachi, Pakistan'
+    WHEN 106 THEN 'Lahore, Pakistan'
+    WHEN 107 THEN 'Karachi, Pakistan'
+    WHEN 108 THEN 'Lahore, Pakistan'
+    WHEN 109 THEN 'Islamabad, Pakistan'
+    WHEN 110 THEN 'Lahore, Pakistan'
+    WHEN 111 THEN 'Lahore, Pakistan'
+    WHEN 112 THEN 'Lahore, Pakistan'
+    WHEN 113 THEN 'Lahore, Pakistan'
+    WHEN 114 THEN 'Islamabad, Pakistan'
+    WHEN 115 THEN 'Lahore, Pakistan'
+    WHEN 311 THEN 'Lahore, Pakistan'
+    WHEN 314 THEN 'Karachi, Pakistan'
+    WHEN 315 THEN 'Islamabad, Pakistan'
+    ELSE COALESCE(NULLIF(company_location, ''), 'Lahore, Pakistan')
+  END,
+  company_details = CASE id
+    WHEN 101 THEN 'Lahore software house hiring Java, Spring Boot, QA, and React engineers for fintech and public-sector products.'
+    WHEN 102 THEN 'Karachi engineering company with product teams across education technology, data platforms, and SaaS integrations.'
+    WHEN 103 THEN 'Islamabad enterprise technology firm delivering cloud, ERP, analytics, and managed services for large Pakistani clients.'
+    WHEN 104 THEN 'Lahore product company building banking, leasing, and mobility platforms for local and international markets.'
+    WHEN 105 THEN 'Karachi digital engineering studio focused on commerce, mobile apps, cloud integrations, and enterprise portals.'
+    WHEN 106 THEN 'Lahore-based product engineering group with teams working on global ERP, CRM, and business automation products.'
+    WHEN 107 THEN 'Karachi technology consultancy hiring full-stack, DevOps, and QA talent for North American product teams.'
+    WHEN 108 THEN 'Lahore software company delivering retail, banking, and cloud platforms with strong Java and .NET teams.'
+    WHEN 109 THEN 'Islamabad product studio building fintech, mobility, and consumer platforms with React, Node, and mobile teams.'
+    WHEN 110 THEN 'Lahore engineering partner hiring backend, frontend, and AI engineers for offshore product development.'
+    WHEN 111 THEN 'Lahore software house focused on web platforms, mobile applications, and enterprise engineering delivery.'
+    WHEN 112 THEN 'Lahore digital agency hiring SEO, web, PHP, WordPress, and full-stack developers for business clients.'
+    WHEN 113 THEN 'Lahore fintech and compliance engineering company hiring Java, Python, QA, and data candidates.'
+    WHEN 114 THEN 'Islamabad cloud engineering company focused on DevOps, infrastructure automation, and distributed systems.'
+    WHEN 115 THEN 'Lahore software company with hiring needs across QA automation, full-stack development, and cloud operations.'
+    WHEN 311 THEN 'Lahore startup building SaaS dashboards and workflow tools for Pakistani SMEs.'
+    WHEN 314 THEN 'Karachi engineering services firm hiring frontend, backend, and QA candidates for client delivery.'
+    WHEN 315 THEN 'Islamabad software consultancy delivering web applications, ERP customizations, and support automation.'
+    ELSE COALESCE(NULLIF(company_details, ''), CONCAT(company_name, ' hires software, QA, data, and cloud talent across Pakistan.'))
+  END;
+
+UPDATE employers
+SET
+  company_name = CASE
+    WHEN company_name IS NULL OR TRIM(company_name) = '' THEN
+      CASE MOD(id, 6)
+        WHEN 0 THEN 'Lahore Digital Works'
+        WHEN 1 THEN 'Karachi Software Studio'
+        WHEN 2 THEN 'Islamabad Cloud Labs'
+        WHEN 3 THEN 'Punjab Tech Partners'
+        WHEN 4 THEN 'Pak Engineering Systems'
+        ELSE 'Indus Software House'
+      END
+    ELSE company_name
+  END,
+  company_location = CASE
+    WHEN company_location IS NULL OR TRIM(company_location) = '' THEN
+      CASE MOD(id, 5)
+        WHEN 0 THEN 'Lahore, Pakistan'
+        WHEN 1 THEN 'Karachi, Pakistan'
+        WHEN 2 THEN 'Islamabad, Pakistan'
+        WHEN 3 THEN 'Rawalpindi, Pakistan'
+        ELSE 'Faisalabad, Pakistan'
+      END
+    ELSE company_location
+  END,
+  company_details = CASE
+    WHEN company_details IS NULL OR TRIM(company_details) = '' THEN CONCAT(COALESCE(NULLIF(company_name, ''), 'Pakistan technology company'), ' hires verified candidates for software engineering, QA, cloud, data, and support roles.')
+    ELSE company_details
+  END;
+
+UPDATE candidates
+SET
+  cv_file_path = '/uploads/cvs/legacy_candidate_profile.pdf',
+  parsed_skills = 'Java, Spring Boot, MySQL, REST API, Git, Unit Testing',
+  preferred_location = 'Lahore',
+  preferred_shift = 'DAY',
+  profile_views = 24,
+  work_type = 'HYBRID'
+WHERE id = 5;
+
+UPDATE candidates c
+JOIN users u ON u.id = c.id
+SET
+  c.cv_file_path = COALESCE(NULLIF(c.cv_file_path, ''), CONCAT('/uploads/cvs/', LOWER(REPLACE(u.name, ' ', '_')), '_cv.pdf')),
+  c.parsed_skills = CASE
+    WHEN c.id = 201 THEN 'Java, Spring Boot, Spring Security, Hibernate, MySQL, REST API, Microservices, Docker, AWS, Jenkins'
+    WHEN c.id = 202 THEN 'React, TypeScript, JavaScript, Redux, Tailwind CSS, REST API, Jest, Figma'
+    WHEN c.id = 203 THEN 'Python, Machine Learning, Pandas, NumPy, SQL, Power BI, TensorFlow, Data Visualization'
+    WHEN c.id = 204 THEN 'React, Node.js, Express, MongoDB, PostgreSQL, JavaScript, Docker, REST API'
+    WHEN c.id = 205 THEN 'Node.js, Express, NestJS, MongoDB, MySQL, TypeScript, Redis, AWS'
+    WHEN c.id = 206 THEN 'Java, Spring Boot, Spring Security, Hibernate, MySQL, REST API, Docker, Kubernetes, AWS, Jenkins, Microservices, Redis'
+    WHEN c.id = 242 THEN 'Java, Spring Boot, Hibernate, MySQL, REST API, Docker, AWS, Jenkins, Git, Microservices'
+    WHEN c.id = 306 THEN 'Java, Spring Boot, React, MySQL, REST API, Docker, Git, Agile'
+    WHEN c.id = 309 THEN 'Python, Django, PostgreSQL, REST API, Docker, Git, Linux'
+    WHEN c.id = 312 THEN 'React, Next.js, TypeScript, Tailwind CSS, REST API, Jest, Git'
+    WHEN c.id = 313 THEN 'Java, Spring Boot, MySQL, Kafka, Redis, Docker, CI/CD'
+    WHEN c.id = 316 THEN 'QA Automation, Selenium, Cypress, Java, API Testing, TestNG, Jira'
+    WHEN c.id = 317 THEN 'Manual QA, Postman, SQL, Selenium, Regression Testing, Agile'
+    WHEN c.id = 318 THEN 'Flutter, Dart, Firebase, REST API, Android, iOS, Git'
+    WHEN c.id = 319 THEN 'DevOps, Linux, Docker, Kubernetes, AWS, Terraform, Jenkins'
+    WHEN c.parsed_skills IS NULL OR LENGTH(TRIM(c.parsed_skills)) < 8 THEN
+      CASE MOD(c.id, 12)
+        WHEN 0 THEN 'Java, Spring Boot, MySQL, REST API, Docker, Git'
+        WHEN 1 THEN 'React, TypeScript, Redux, Tailwind CSS, REST API, Jest'
+        WHEN 2 THEN 'Node.js, Express, MongoDB, PostgreSQL, Redis, AWS'
+        WHEN 3 THEN 'Python, Django, Flask, PostgreSQL, Pandas, SQL'
+        WHEN 4 THEN 'QA Automation, Selenium, Cypress, Postman, Jira, SQL'
+        WHEN 5 THEN 'PHP, Laravel, MySQL, REST API, JavaScript, Git'
+        WHEN 6 THEN '.NET Core, C#, SQL Server, Entity Framework, Azure, REST API'
+        WHEN 7 THEN 'DevOps, Docker, Kubernetes, AWS, Jenkins, Linux'
+        WHEN 8 THEN 'Android, Kotlin, Java, Firebase, REST API, Git'
+        WHEN 9 THEN 'Flutter, Dart, Firebase, REST API, Mobile UI, Git'
+        WHEN 10 THEN 'Data Analysis, Python, SQL, Power BI, Excel, Tableau'
+        ELSE 'UI UX, Figma, Design Systems, HTML, CSS, Accessibility'
+      END
+    ELSE c.parsed_skills
+  END,
+  c.preferred_location = CASE
+    WHEN c.preferred_location IS NULL OR TRIM(c.preferred_location) = '' THEN
+      CASE MOD(c.id, 7)
+        WHEN 0 THEN 'Lahore'
+        WHEN 1 THEN 'Karachi'
+        WHEN 2 THEN 'Islamabad'
+        WHEN 3 THEN 'Rawalpindi'
+        WHEN 4 THEN 'Faisalabad'
+        WHEN 5 THEN 'Multan'
+        ELSE 'Peshawar'
+      END
+    ELSE c.preferred_location
+  END,
+  c.preferred_shift = CASE
+    WHEN c.preferred_shift IS NULL OR TRIM(c.preferred_shift) = '' THEN CASE WHEN MOD(c.id, 3) = 0 THEN 'NIGHT' ELSE 'DAY' END
+    ELSE c.preferred_shift
+  END,
+  c.work_type = CASE
+    WHEN c.work_type IS NULL OR TRIM(c.work_type) = '' THEN
+      CASE MOD(c.id, 3)
+        WHEN 0 THEN 'REMOTE'
+        WHEN 1 THEN 'HYBRID'
+        ELSE 'ON_SITE'
+      END
+    ELSE c.work_type
+  END,
+  c.profile_views = CASE WHEN c.profile_views IS NULL OR c.profile_views = 0 THEN 18 + MOD(c.id * 11, 90) ELSE c.profile_views END;
+
+UPDATE candidates
+SET
+  hired_at = '2026-04-23 15:20:00.000000',
+  hired_company_name = 'TechVista Solutions',
+  hired_employer_email = 'sarah.ahmed@techvista.pk',
+  hired_job_title = 'Senior Java Backend Developer'
+WHERE id = 242;
+
+UPDATE candidates
+SET
+  preferred_location = 'Lahore',
+  preferred_shift = 'DAY',
+  work_type = 'HYBRID'
+WHERE id = 306;
+
+UPDATE job_postings jp
+LEFT JOIN employers e ON e.id = jp.employer_id
+SET
+  jp.location = CASE
+    WHEN jp.location IS NULL OR TRIM(jp.location) = '' THEN COALESCE(SUBSTRING_INDEX(e.company_location, ',', 1), 'Lahore')
+    ELSE jp.location
+  END,
+  jp.shift = CASE
+    WHEN jp.shift IS NULL OR TRIM(jp.shift) = '' THEN CASE WHEN MOD(jp.id, 4) = 0 THEN 'NIGHT' ELSE 'DAY' END
+    ELSE jp.shift
+  END,
+  jp.experience_years = COALESCE(jp.experience_years, 1 + MOD(jp.id, 6)),
+  jp.required_skills = CASE
+    WHEN jp.required_skills IS NULL OR LENGTH(TRIM(jp.required_skills)) < 5 THEN
+      CASE MOD(jp.id, 10)
+        WHEN 0 THEN 'Java, Spring Boot, MySQL, REST API, Docker'
+        WHEN 1 THEN 'React, TypeScript, Redux, Tailwind CSS'
+        WHEN 2 THEN 'Node.js, Express, MongoDB, AWS'
+        WHEN 3 THEN 'Python, Django, PostgreSQL, Data Analysis'
+        WHEN 4 THEN 'QA Automation, Selenium, Cypress, API Testing'
+        WHEN 5 THEN 'PHP, Laravel, MySQL, JavaScript'
+        WHEN 6 THEN '.NET Core, C#, SQL Server, Azure'
+        WHEN 7 THEN 'DevOps, Docker, Kubernetes, AWS, Jenkins'
+        WHEN 8 THEN 'Flutter, Dart, Firebase, REST API'
+        ELSE 'UI UX, Figma, HTML, CSS, Accessibility'
+      END
+    ELSE jp.required_skills
+  END,
+  jp.created_at = COALESCE(jp.created_at, DATE_ADD('2026-04-01 09:00:00.000000', INTERVAL MOD(jp.id, 35) DAY)),
+  jp.status = COALESCE(NULLIF(jp.status, ''), 'OPEN');
+
+UPDATE hiring_prompts hp
+JOIN job_postings jp ON jp.id = hp.job_posting_id
+SET
+  hp.raw_text = CASE
+    WHEN hp.raw_text IS NULL OR TRIM(hp.raw_text) = '' THEN CONCAT('We need a ', jp.job_title, ' in ', jp.location, ', Pakistan with ', jp.experience_years, '+ years experience. Required skills: ', jp.required_skills, '. Shift: ', jp.shift, '.')
+    ELSE hp.raw_text
+  END,
+  hp.parsed_skills = COALESCE(NULLIF(hp.parsed_skills, ''), jp.required_skills),
+  hp.parsed_location = COALESCE(NULLIF(hp.parsed_location, ''), jp.location),
+  hp.parsed_shift = COALESCE(NULLIF(hp.parsed_shift, ''), jp.shift),
+  hp.parsed_experience_years = COALESCE(hp.parsed_experience_years, jp.experience_years),
+  hp.submission_date = COALESCE(hp.submission_date, jp.created_at);
+
+INSERT INTO hiring_prompts (
+  employer_id,
+  job_posting_id,
+  raw_text,
+  parsed_skills,
+  parsed_location,
+  parsed_shift,
+  parsed_experience_years,
+  submission_date
+)
+SELECT
+  jp.employer_id,
+  jp.id,
+  CONCAT('Hire a ', jp.job_title, ' for ', COALESCE(e.company_name, 'our team'), ' in ', jp.location, ', Pakistan. Skills needed: ', jp.required_skills, '. Experience: ', jp.experience_years, '+ years. Shift: ', jp.shift, '.'),
+  jp.required_skills,
+  jp.location,
+  jp.shift,
+  jp.experience_years,
+  COALESCE(jp.created_at, '2026-04-01 09:00:00.000000')
+FROM job_postings jp
+LEFT JOIN employers e ON e.id = jp.employer_id
+LEFT JOIN hiring_prompts hp ON hp.job_posting_id = jp.id
+WHERE hp.id IS NULL;
+
+DELETE FROM hiring_prompts
+WHERE job_posting_id IS NULL;
+
+INSERT INTO applications (candidate_id, job_posting_id, status, created_at, updated_at)
+SELECT
+  ms.candidate_id,
+  ms.job_posting_id,
+  CASE
+    WHEN ms.ranking = 1 THEN 'SHORTLISTED'
+    WHEN ms.ranking = 2 THEN 'SCHEDULED'
+    WHEN ms.ranking = 3 THEN 'CONFIRMED'
+    WHEN ms.ranking = 4 THEN 'RECOMMENDED'
+    ELSE 'REJECTED'
+  END,
+  DATE_ADD(COALESCE(jp.created_at, '2026-04-01 09:00:00.000000'), INTERVAL ms.ranking HOUR),
+  DATE_ADD(COALESCE(jp.created_at, '2026-04-01 09:00:00.000000'), INTERVAL (ms.ranking + 1) DAY)
+FROM match_scores ms
+JOIN job_postings jp ON jp.id = ms.job_posting_id
+WHERE ms.ranking <= 5
+ON DUPLICATE KEY UPDATE
+  updated_at = COALESCE(updated_at, VALUES(updated_at));
+
+INSERT INTO match_scores (
+  location_matched,
+  match_percentage,
+  ranking,
+  shift_matched,
+  skill_match_pct,
+  candidate_id,
+  job_posting_id
+)
+SELECT
+  CASE WHEN LOWER(COALESCE(c.preferred_location, '')) = LOWER(COALESCE(jp.location, '')) THEN 1 ELSE 0 END,
+  CASE a.status
+    WHEN 'HIRED' THEN 94.5
+    WHEN 'REVIEWED' THEN 88.0
+    WHEN 'COMPLETED' THEN 84.0
+    WHEN 'CONFIRMED' THEN 78.0
+    WHEN 'SCHEDULED' THEN 72.0
+    WHEN 'SHORTLISTED' THEN 66.0
+    WHEN 'REJECTED' THEN 38.0
+    ELSE 55.0
+  END + MOD(a.candidate_id + a.job_posting_id, 7),
+  10 + MOD(a.candidate_id + a.job_posting_id, 30),
+  CASE WHEN LOWER(COALESCE(c.preferred_shift, '')) = LOWER(COALESCE(jp.shift, '')) THEN 1 ELSE 0 END,
+  CASE a.status
+    WHEN 'HIRED' THEN 92.0
+    WHEN 'REVIEWED' THEN 86.0
+    WHEN 'COMPLETED' THEN 82.0
+    WHEN 'CONFIRMED' THEN 76.0
+    WHEN 'SCHEDULED' THEN 70.0
+    WHEN 'SHORTLISTED' THEN 64.0
+    WHEN 'REJECTED' THEN 36.0
+    ELSE 52.0
+  END,
+  a.candidate_id,
+  a.job_posting_id
+FROM applications a
+JOIN candidates c ON c.id = a.candidate_id
+JOIN job_postings jp ON jp.id = a.job_posting_id
+LEFT JOIN match_scores ms ON ms.candidate_id = a.candidate_id AND ms.job_posting_id = a.job_posting_id
+WHERE ms.id IS NULL
+ON DUPLICATE KEY UPDATE
+  match_percentage = VALUES(match_percentage),
+  skill_match_pct = VALUES(skill_match_pct),
+  location_matched = VALUES(location_matched),
+  shift_matched = VALUES(shift_matched);
+
+UPDATE match_scores ms
+JOIN applications a ON a.candidate_id = ms.candidate_id AND a.job_posting_id = ms.job_posting_id
+SET
+  ms.match_percentage = CASE a.status
+    WHEN 'HIRED' THEN 94.5
+    WHEN 'REVIEWED' THEN 88.0
+    WHEN 'COMPLETED' THEN 84.0
+    WHEN 'CONFIRMED' THEN 78.0
+    WHEN 'SCHEDULED' THEN 72.0
+    WHEN 'SHORTLISTED' THEN 66.0
+    WHEN 'REJECTED' THEN 38.0
+    ELSE 55.0
+  END + MOD(a.candidate_id + a.job_posting_id, 7),
+  ms.skill_match_pct = CASE a.status
+    WHEN 'HIRED' THEN 92.0
+    WHEN 'REVIEWED' THEN 86.0
+    WHEN 'COMPLETED' THEN 82.0
+    WHEN 'CONFIRMED' THEN 76.0
+    WHEN 'SCHEDULED' THEN 70.0
+    WHEN 'SHORTLISTED' THEN 64.0
+    WHEN 'REJECTED' THEN 36.0
+    ELSE 52.0
+  END,
+  ms.ranking = CASE WHEN ms.ranking IS NULL OR ms.ranking <= 0 THEN 10 + MOD(a.candidate_id + a.job_posting_id, 30) ELSE ms.ranking END
+WHERE ms.match_percentage IS NULL
+   OR ms.match_percentage <= 0
+   OR ms.skill_match_pct IS NULL
+   OR ms.skill_match_pct <= 0;
+
+UPDATE match_scores
+SET
+  match_percentage = 45 + MOD(candidate_id + job_posting_id, 50),
+  skill_match_pct = 40 + MOD(candidate_id + job_posting_id, 45),
+  ranking = CASE WHEN ranking IS NULL OR ranking <= 0 THEN 20 + MOD(candidate_id + job_posting_id, 40) ELSE ranking END
+WHERE match_percentage IS NULL
+   OR match_percentage <= 0
+   OR skill_match_pct IS NULL
+   OR skill_match_pct <= 0;
+
+INSERT INTO application_status_history (application_id, previous_status, new_status, actor_email, source, changed_at)
+SELECT
+  a.id,
+  NULL,
+  'RECOMMENDED',
+  'system@swifthire.pk',
+  'ATS_MATCH',
+  a.created_at
+FROM applications a
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM application_status_history h
+  WHERE h.application_id = a.id
+    AND h.new_status = 'RECOMMENDED'
+);
+
+INSERT INTO application_status_history (application_id, previous_status, new_status, actor_email, source, changed_at)
+SELECT
+  a.id,
+  'RECOMMENDED',
+  a.status,
+  COALESCE(u.email, 'employer@swifthire.pk'),
+  'SEED_STATUS_PROGRESS',
+  a.updated_at
+FROM applications a
+JOIN job_postings jp ON jp.id = a.job_posting_id
+LEFT JOIN users u ON u.id = jp.employer_id
+WHERE a.status <> 'RECOMMENDED'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM application_status_history h
+    WHERE h.application_id = a.id
+      AND h.new_status = a.status
+  );
+
+UPDATE reviews
+SET comment = CASE id
+  WHEN 13 THEN 'Strong technical ability with a practical approach to backend problem solving.'
+  WHEN 14 THEN 'Technically capable and should keep improving communication during technical walkthroughs.'
+  WHEN 16 THEN 'Good screening conversation with clear interest in the role and realistic salary expectations.'
+  WHEN 17 THEN 'Candidate was not aligned with the role requirements after the technical discussion.'
+  WHEN 18 THEN 'Solid interview performance with good understanding of product engineering tradeoffs.'
+  WHEN 19 THEN 'Professional employer discussion with clear expectations and timely follow-up.'
+  ELSE 'Useful interview feedback recorded for future hiring decisions.'
+END
+WHERE comment IS NULL
+   OR TRIM(comment) = ''
+   OR LOWER(TRIM(comment)) IN ('did nothing', 'strong technical ability', 'strOng technical ability');
+
+UPDATE notification_logs
+SET recipient_email = 'waleed.shahbaz@bytecraft.pk'
+WHERE recipient_email = 'busstand304@gmail.com';
+
+UPDATE application_status_history
+SET actor_email = 'waleed.shahbaz@bytecraft.pk'
+WHERE actor_email = 'busstand304@gmail.com';
+
+INSERT IGNORE INTO reviews (id, comment, created_at, rating_value, interview_slot_id, ratee_id, rater_id) VALUES
+  (19001, 'Strong Spring Boot fundamentals and clear communication during the technical discussion.', '2026-04-24 16:30:00.000000', 4.8, 13001, 242, 101),
+  (19002, 'Professional interview process with practical backend questions and timely feedback.', '2026-04-24 18:00:00.000000', 4.6, 13001, 101, 242),
+  (19003, 'Good frontend discussion with practical Next.js and API integration examples.', '2026-05-16 16:15:00.000000', 4.4, 13002, 242, 108),
+  (19004, 'Well organized screening call and realistic product discussion.', '2026-05-16 17:05:00.000000', 4.5, 13002, 108, 242),
+  (19005, 'Strong backend approach with clear Java, API, and deployment examples.', '2026-05-02 17:40:00.000000', 4.7, 13003, 242, 111);
+
+INSERT IGNORE INTO notification_logs (id, recipient_email, event_type, interview_slot_id, status, error_message, sent_at) VALUES
+  (18001, 'atif.riaz@gmail.com', 'INTERVIEW_SCHEDULED', 13001, 'SENT', NULL, '2026-04-22 11:35:00.000000'),
+  (18002, 'sarah.ahmed@techvista.pk', 'CANDIDATE_CONFIRMED', 13001, 'SENT', NULL, '2026-04-22 12:05:00.000000'),
+  (18003, 'ayesha.khan@gmail.com', 'INTERVIEW_REMINDER', 13002, 'SENT', NULL, '2026-04-25 09:10:00.000000'),
+  (18004, 'mehran.iqbal@gmail.com', 'APPLICATION_SHORTLISTED', NULL, 'SENT', NULL, '2026-05-03 10:25:00.000000'),
+  (18005, 'hamdan.sheikh@gmail.com', 'APPLICATION_REJECTED', NULL, 'SENT', NULL, '2026-05-04 15:45:00.000000');
+
+DELETE FROM graphical_reports;
+
+INSERT INTO graphical_reports (id, data, date_range_from, date_range_to, generated_at, report_type, generated_by) VALUES
+  (17001, '{"totalCandidates":116,"totalEmployers":19,"activeUsers":132,"bannedUsers":2}', '2026-04-01', '2026-04-30', '2026-05-01 09:15:00.000000', 'users', 1),
+  (17002, '{"openJobs":118,"closedJobs":9,"topLocations":["Lahore","Karachi","Islamabad"],"topSkills":["Java","React","Spring Boot","QA Automation"]}', '2026-04-01', '2026-04-30', '2026-05-01 09:20:00.000000', 'jobs', 1),
+  (17003, '{"platformAverageAtsScore":62.8,"belowThreshold":41,"threshold":50,"topJobsReported":12}', '2026-04-01', '2026-04-30', '2026-05-01 09:25:00.000000', 'ats', 1),
+  (17004, '{"scheduledInterviews":42,"confirmedInterviews":31,"completedInterviews":19,"hiredCandidates":6}', '2026-04-01', '2026-04-30', '2026-05-01 09:30:00.000000', 'analytics', 1),
+  (17005, '{"emailsSent":248,"deliveryRate":98.4,"failedEmails":4,"remindersSent":77}', '2026-04-01', '2026-04-30', '2026-05-01 09:35:00.000000', 'notifications', 1);
+
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
