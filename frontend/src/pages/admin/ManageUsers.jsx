@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { adminApi } from '../../api/adminApi'
 import AppLayout from '../../components/common/AppLayout'
 import {
@@ -10,6 +10,16 @@ import {
 const ROLE_COLOR   = { CANDIDATE: '#2EE5B0', EMPLOYER: '#818CF8', ADMIN: '#F59E0B' }
 const STATUS_COLOR = { ACTIVE: '#2EE5B0', BANNED: '#EF4444', DEACTIVATED: '#6B7280' }
 const SLOT_STATUS_COLOR = { PENDING: '#F59E0B', CONFIRMED: '#2EE5B0', COMPLETED: '#6B7280', CANCELLED: '#EF4444' }
+const DEFAULT_USER_FILTERS = { role: '', maxRating: '', status: '', search: '' }
+
+function buildUserFilterParams(values) {
+  const params = {}
+  if (values.role) params.role = values.role
+  if (values.maxRating) params.maxRating = values.maxRating
+  if (values.status) params.status = values.status
+  if (values.search) params.search = values.search
+  return params
+}
 
 function ProfileModal({ userId, onClose }) {
   const [detail, setDetail]   = useState(null)
@@ -305,58 +315,42 @@ function Divider({ label }) {
 
 export default function ManageUsers() {
   const [users, setUsers]         = useState([])
-  const [filter, setFilter]       = useState({ role: '', maxRating: '', status: '', search: '' })
+  const [filter, setFilter]       = useState(DEFAULT_USER_FILTERS)
   const [toast, setToast]         = useState({ msg: '', type: 'ok' })
-  const [loading, setLoading]     = useState(false)
+  const [loading, setLoading]     = useState(true)
   const [auditLogs, setAuditLogs] = useState([])
   const [logsLoading, setLogsLoading]   = useState(false)
   const [confirmDeleteId, setConfirmDeleteId]         = useState(null)
   const [confirmBlockId, setConfirmBlockId]           = useState(null)
   const [confirmDeactivateId, setConfirmDeactivateId] = useState(null)
   const [viewingId, setViewingId] = useState(null)
+  const initialUsersLoaded = useRef(false)
+  const usersRequestSeq = useRef(0)
 
   const notify = (msg, type = 'ok') => {
     setToast({ msg, type })
     setTimeout(() => setToast({ msg: '', type: 'ok' }), 4000)
   }
 
-  const doSearch = async () => {
-    setLoading(true)
+  const loadUsers = async (nextFilter = filter, showInitialLoading = false) => {
+    const requestId = ++usersRequestSeq.current
+    if (showInitialLoading) setLoading(true)
     try {
-      const params = {}
-      if (filter.role)      params.role = filter.role
-      if (filter.maxRating) params.maxRating = filter.maxRating
-      if (filter.status)    params.status = filter.status
-      if (filter.search)    params.search = filter.search
-      const res = await adminApi.getUsers(params)
+      const res = await adminApi.getUsers(buildUserFilterParams(nextFilter))
+      if (requestId !== usersRequestSeq.current) return
       setUsers(res.data.data)
     } catch (err) {
+      if (requestId !== usersRequestSeq.current) return
       notify(err.response?.data?.message || 'Search failed.', 'err')
       setUsers([])
     } finally {
-      setLoading(false)
+      if (requestId !== usersRequestSeq.current) return
+      if (showInitialLoading) setLoading(false)
+      initialUsersLoaded.current = true
     }
   }
 
-  const searchWith = async (patch) => {
-    const merged = { ...filter, ...patch }
-    setFilter(merged)
-    setLoading(true)
-    try {
-      const params = {}
-      if (merged.role)      params.role = merged.role
-      if (merged.maxRating) params.maxRating = merged.maxRating
-      if (merged.status)    params.status = merged.status
-      if (merged.search)    params.search = merged.search
-      const res = await adminApi.getUsers(params)
-      setUsers(res.data.data)
-    } catch (err) {
-      notify(err.response?.data?.message || 'Search failed.', 'err')
-      setUsers([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  const clearFilters = () => setFilter(DEFAULT_USER_FILTERS)
 
   const updateStatus = async (userId, action) => {
     setConfirmBlockId(null)
@@ -364,7 +358,7 @@ export default function ManageUsers() {
     try {
       await adminApi.updateStatus(userId, action)
       notify('User status updated successfully.')
-      doSearch()
+      loadUsers(filter)
       loadAuditLogs()
     } catch (err) {
       notify(err.response?.data?.message || 'Action failed.', 'err')
@@ -405,7 +399,13 @@ export default function ManageUsers() {
     }
   }
 
-  useEffect(() => { doSearch(); loadAuditLogs() }, [])
+  useEffect(() => { loadUsers(DEFAULT_USER_FILTERS, true); loadAuditLogs() }, [])
+
+  useEffect(() => {
+    if (!initialUsersLoaded.current) return undefined
+    const timeoutId = window.setTimeout(() => loadUsers(filter), 250)
+    return () => window.clearTimeout(timeoutId)
+  }, [filter])
 
   return (
     <>
@@ -447,18 +447,17 @@ export default function ManageUsers() {
               type="text" placeholder="Name or email"
               value={filter.search}
               onChange={e => setFilter(f => ({ ...f, search: e.target.value }))}
-              onKeyDown={e => e.key === 'Enter' && doSearch()}
               style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#9CA3AF', padding: '7px 12px 7px 28px', fontSize: '0.82rem', outline: 'none', width: 170 }} />
           </div>
 
-          <select value={filter.role} onChange={e => searchWith({ role: e.target.value })}
+          <select value={filter.role} onChange={e => setFilter(f => ({ ...f, role: e.target.value }))}
             style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#9CA3AF', padding: '7px 12px', fontSize: '0.82rem', outline: 'none' }}>
             <option value="">All Roles</option>
             <option value="CANDIDATE">Candidate</option>
             <option value="EMPLOYER">Employer</option>
           </select>
 
-          <select value={filter.status} onChange={e => searchWith({ status: e.target.value })}
+          <select value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))}
             style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#9CA3AF', padding: '7px 12px', fontSize: '0.82rem', outline: 'none' }}>
             <option value="">All Statuses</option>
             <option value="ACTIVE">Active</option>
@@ -468,16 +467,23 @@ export default function ManageUsers() {
 
           <div style={{ position: 'relative' }}>
             <Star size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#4B5563' }} />
-            <input type="number" min="0" max="5" step="0.1" placeholder="Max rating"
+            <select
               value={filter.maxRating}
               onChange={e => setFilter(f => ({ ...f, maxRating: e.target.value }))}
-              onBlur={e => searchWith({ maxRating: e.target.value })}
-              style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#9CA3AF', padding: '7px 12px 7px 28px', fontSize: '0.82rem', outline: 'none', width: 130 }} />
+              style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#9CA3AF', padding: '7px 12px 7px 28px', fontSize: '0.82rem', outline: 'none', width: 140 }}>
+              <option value="">Any rating</option>
+              <option value="5">5 stars</option>
+              <option value="4.5">4.5 or lower</option>
+              <option value="4">4 or lower</option>
+              <option value="3">3 or lower</option>
+              <option value="2">2 or lower</option>
+              <option value="1">1 or lower</option>
+            </select>
           </div>
 
-          <button onClick={doSearch}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: 'rgba(46,229,176,0.08)', border: '1px solid rgba(46,229,176,0.2)', color: '#2EE5B0', fontSize: '0.82rem', fontWeight: 500, cursor: 'pointer' }}>
-            <Search size={13} /> Search
+          <button onClick={clearFilters}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', color: '#9CA3AF', fontSize: '0.82rem', fontWeight: 500, cursor: 'pointer' }}>
+            <X size={13} /> Clear
           </button>
         </div>
 
