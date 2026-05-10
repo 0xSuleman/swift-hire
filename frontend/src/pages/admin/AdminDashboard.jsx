@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import AppLayout from '../../components/common/AppLayout'
-import { Users, FileText, ArrowRight } from 'lucide-react'
+import { Users, FileText, ArrowRight, BarChart2 } from 'lucide-react'
 
 const QUICK_LINKS = [
   { label: 'Manage Users',    desc: 'Search, filter, ban or approve accounts', to: '/admin/users',   Icon: Users,    color: '#F59E0B' },
   { label: 'System Reports',  desc: 'Generate reports by category and date',   to: '/admin/reports', Icon: FileText, color: '#818CF8' },
+  { label: 'Analytics',       desc: 'View platform metrics and ATS trends',     to: '/admin/analytics', Icon: BarChart2, color: '#2EE5B0' },
 ]
 
 export default function AdminDashboard() {
