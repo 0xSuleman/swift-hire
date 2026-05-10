@@ -745,11 +745,13 @@ ON DUPLICATE KEY UPDATE
     `parsed_experience_years` = VALUES(`parsed_experience_years`),
     `submission_date` = COALESCE(`hiring_prompts`.`submission_date`, VALUES(`submission_date`));
 
+DELETE FROM `match_scores`;
+
 INSERT IGNORE INTO `match_scores` (`id`, `location_matched`, `match_percentage`, `ranking`, `shift_matched`, `skill_match_pct`, `candidate_id`, `job_posting_id`)
 SELECT 4000000 + missing_candidates.`candidate_id` * 100 + seed_jobs.`rn`,
        CASE WHEN LOWER(COALESCE(c.`preferred_location`, '')) = LOWER(COALESCE(seed_jobs.`location`, '')) THEN b'1' ELSE b'0' END,
        45 + MOD(missing_candidates.`candidate_id` + seed_jobs.`job_posting_id` + seed_jobs.`rn`, 51),
-       seed_jobs.`rn`,
+       ROW_NUMBER() OVER (PARTITION BY seed_jobs.`job_posting_id` ORDER BY missing_candidates.`candidate_id`) AS `c_rank`,
        CASE WHEN LOWER(COALESCE(c.`preferred_shift`, '')) = LOWER(COALESCE(seed_jobs.`shift`, '')) THEN b'1' ELSE b'0' END,
        48 + MOD(missing_candidates.`candidate_id` + seed_jobs.`job_posting_id`, 45),
        missing_candidates.`candidate_id`,
