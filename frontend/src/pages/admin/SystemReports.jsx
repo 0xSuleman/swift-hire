@@ -4,12 +4,12 @@ import AppLayout from '../../components/common/AppLayout'
 import { FileText, Calendar, AlertCircle, Loader2, Download, History, ChevronDown, ChevronUp, Search } from 'lucide-react'
 
 const CATEGORIES = [
-  { value: 'users',     label: 'Users' },
-  { value: 'jobs',      label: 'Jobs' },
-  { value: 'ratings',   label: 'Ratings' },
-  { value: 'ats',       label: 'ATS' },
-  { value: 'analytics',     label: 'Analytics' },
-  { value: 'notifications', label: 'Notifications' },
+  { value: 'users', label: 'Users', description: 'Shows candidate and employer accounts with status, ratings, and activity totals.' },
+  { value: 'jobs', label: 'Jobs', description: 'Lists job postings with employer, location, shift, status, and posting dates.' },
+  { value: 'ratings', label: 'Ratings', description: 'Summarizes review counts, average ratings, and rating records in the selected range.' },
+  { value: 'ats', label: 'ATS', description: 'Reports platform ATS average, job averages, top candidates, and below-threshold matches.' },
+  { value: 'analytics', label: 'Analytics', description: 'Gives a high-level operational snapshot across users, jobs, interviews, reviews, and ATS.' },
+  { value: 'notifications', label: 'Notifications', description: 'Displays email invitation and reminder delivery logs with sent or failed status.' },
 ]
 
 const TODAY = new Date().toISOString().split('T')[0]
@@ -210,6 +210,7 @@ export default function SystemReports() {
 
   const summaryKeys = report ? Object.entries(report).filter(([, v]) => v !== null && typeof v !== 'object') : []
   const records     = report?.records  // used only by jobs report
+  const activeCategory = CATEGORIES.find(c => c.value === params.category)
 
   const filteredHistory = historyFilter
     ? history.filter(h => h.reportType === historyFilter)
@@ -260,6 +261,14 @@ export default function SystemReports() {
                       </button>
                     )
                   })}
+                </div>
+                <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '0.7rem', color: '#4B5563', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Description
+                  </p>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#9CA3AF', lineHeight: 1.5 }}>
+                    {activeCategory?.description}
+                  </p>
                 </div>
               </div>
 
