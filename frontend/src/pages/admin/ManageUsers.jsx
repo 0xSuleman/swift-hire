@@ -472,7 +472,6 @@ export default function ManageUsers() {
               onChange={e => setFilter(f => ({ ...f, maxRating: e.target.value }))}
               style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#9CA3AF', padding: '7px 12px 7px 28px', fontSize: '0.82rem', outline: 'none', width: 140 }}>
               <option value="">Any rating</option>
-              <option value="5">5 stars</option>
               <option value="4.5">4.5 or lower</option>
               <option value="4">4 or lower</option>
               <option value="3">3 or lower</option>
@@ -485,6 +484,10 @@ export default function ManageUsers() {
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', color: '#9CA3AF', fontSize: '0.82rem', fontWeight: 500, cursor: 'pointer' }}>
             <X size={13} /> Clear
           </button>
+
+          <span style={{ marginLeft: 'auto', color: '#4B5563', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+            {users.length} match{users.length === 1 ? '' : 'es'} found
+          </span>
         </div>
 
         {loading && (
