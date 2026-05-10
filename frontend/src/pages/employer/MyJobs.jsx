@@ -182,7 +182,7 @@ export default function MyJobs() {
                         <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <AlertTriangle size={14} style={{ color: '#F59E0B' }} />
                           <span style={{ fontSize: '0.78rem', color: '#9CA3AF' }}>Archive this job?</span>
-                          <Btn color="#FCA5A5" bg="rgba(239,68,68,0.08)" border="rgba(239,68,68,0.2)" onClick={() => handleArchive(job.id)}>Yes, archive</Btn>
+                          <Btn color="#F59E0B" bg="rgba(245,158,11,0.08)" border="rgba(245,158,11,0.2)" onClick={() => handleArchive(job.id)}>Yes, archive</Btn>
                           <Btn color="#6B7280" bg="transparent" border="rgba(107,114,128,0.2)" onClick={() => setConfirmId(null)}>Cancel</Btn>
                         </span>
                       ) : (
@@ -196,12 +196,12 @@ export default function MyJobs() {
                             </Btn>
                           )}
                           {job.status === 'OPEN' && (
-                            <Btn color="#F59E0B" bg="rgba(245,158,11,0.08)" border="rgba(245,158,11,0.2)" onClick={() => handleClose(job.id)}>
+                            <Btn color="#FCA5A5" bg="rgba(239,68,68,0.08)" border="rgba(239,68,68,0.2)" onClick={() => handleClose(job.id)}>
                               Close
                             </Btn>
                           )}
                           {job.status !== 'ARCHIVED' && (
-                            <Btn color="#FCA5A5" bg="rgba(239,68,68,0.06)" border="rgba(239,68,68,0.15)" onClick={() => setConfirmId(job.id)}>
+                            <Btn color="#F59E0B" bg="rgba(245,158,11,0.08)" border="rgba(245,158,11,0.2)" onClick={() => setConfirmId(job.id)}>
                               Archive
                             </Btn>
                           )}

@@ -1,12 +1,14 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import AppLayout from '../../components/common/AppLayout'
-import { Zap, Building2, BarChart2, ArrowRight } from 'lucide-react'
+import { Zap, Building2, BarChart2, ArrowRight, Briefcase, CalendarDays } from 'lucide-react'
 
 const QUICK_LINKS = [
-  { label: 'Start Hiring',         desc: 'Type a prompt — get matched candidates', to: '/employer/prompt',    Icon: Zap,       color: '#2EE5B0' },
-  { label: 'Company Profile',      desc: 'Update your company details',            to: '/employer/profile',   Icon: Building2, color: '#818CF8' },
-  { label: 'Hiring Analytics',     desc: 'Track time-to-hire and acceptance rates', to: '/employer/analytics', Icon: BarChart2, color: '#F59E0B' },
+  { label: 'Start Hiring',     desc: 'Type a prompt and match candidates', to: '/employer/prompt',     Icon: Zap,          color: '#2EE5B0' },
+  { label: 'My Jobs',          desc: 'Manage postings and candidates',     to: '/employer/jobs',       Icon: Briefcase,    color: '#818CF8' },
+  { label: 'Interviews',       desc: 'Review scheduled interview slots',   to: '/employer/interviews', Icon: CalendarDays, color: '#F59E0B' },
+  { label: 'Company Profile',  desc: 'Update your company details',        to: '/employer/profile',    Icon: Building2,    color: '#38BDF8' },
+  { label: 'Hiring Analytics', desc: 'Track hiring and ATS performance',    to: '/employer/analytics',  Icon: BarChart2,    color: '#A78BFA' },
 ]
 
 export default function EmployerDashboard() {
