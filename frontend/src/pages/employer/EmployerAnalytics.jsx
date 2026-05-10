@@ -69,6 +69,7 @@ export default function EmployerAnalytics() {
   const stats = [
     { label: 'Average Rating',   value: data?.averageRating?.toFixed(1) ?? '—', Icon: Star,       color: '#F59E0B', suffix: '/ 5' },
     { label: 'Total Reviews',    value: data?.totalRatings ?? 0,                Icon: Users,      color: '#818CF8', suffix: '' },
+    { label: 'Average ATS',      value: data?.averageAtsScore ?? '—',           Icon: TrendingUp, color: '#2EE5B0', suffix: '%' },
     { label: 'Avg Time to Hire', value: data?.avgTimeToHireDays ?? '—',         Icon: Clock,      color: '#2EE5B0', suffix: 'days' },
     { label: 'Acceptance Rate',  value: data?.acceptanceRate ?? 0,              Icon: TrendingUp, color: '#34D399', suffix: '%' },
   ]
@@ -201,7 +202,7 @@ export default function EmployerAnalytics() {
           {/* Row 2: time-to-hire horizontal bar */}
           <div className="app-card" style={{ filter: 'drop-shadow(0 0 10px rgba(245,158,11,0.07))' }}>
             <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#E8EAF0', fontSize: '0.9rem' }}>Time to Hire per Job (days)</p>
-            <div style={{ position: 'relative', height: '260px' }}><Bar data={timeBar} options={{ ...darkGridH }} /></div>
+            <div style={{ position: 'relative', height: `${Math.max(260, breakdown.length * 36)}px` }}><Bar data={timeBar} options={{ ...darkGridH }} /></div>
           </div>
 
           {/* Row 3: job status pie + accepted slots bar */}

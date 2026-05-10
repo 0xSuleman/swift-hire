@@ -102,9 +102,9 @@ brew services start mysql
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS swift_hire;"
 ```
 
-**2. Seed Admin Account** *(run once after DB is created)*
+**2. Seed Demo Data + Admin Account** *(run once after DB is created)*
 ```bash
-mysql -u root swift_hire < ~/Desktop/swift-hire/seed_admin.sql
+mysql -u root swift_hire < ~/Desktop/swift-hire/seed.sql
 # Login: admin@swifthire.com / Admin@1234
 ```
 
@@ -139,9 +139,9 @@ Or if MySQL is in your PATH:
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS swift_hire;"
 ```
 
-**2. Seed Admin Account** *(run once after DB is created)*
+**2. Seed Demo Data + Admin Account** *(run once after DB is created)*
 ```cmd
-mysql -u root swift_hire < seed_admin.sql
+mysql -u root swift_hire < seed.sql
 rem Login: admin@swifthire.com / Admin@1234
 ```
 

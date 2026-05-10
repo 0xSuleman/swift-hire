@@ -1,5 +1,6 @@
 package com.swifthire.job.service;
 
+import com.swifthire.application.service.ApplicationService;
 import com.swifthire.job.model.JobPosting;
 import com.swifthire.job.model.MatchScore;
 import com.swifthire.job.repository.MatchScoreRepository;
@@ -23,6 +24,7 @@ public class AtsScoreService {
 
     private final CandidateRepository candidateRepository;
     private final MatchScoreRepository matchScoreRepository;
+    private final ApplicationService applicationService;
 
     @Transactional
     public List<MatchScore> scoreAndRank(JobPosting jobPosting) {
@@ -31,23 +33,34 @@ public class AtsScoreService {
         List<Candidate> allCandidates = candidateRepository.findAll();
 
         // Score each candidate — exclude hired candidates from the active pool.
-        // Shift and location are hard filters when specified by the job (non-negotiable constraints).
+        // Skills are the primary gate; location and shift affect bonus only (not hard filters).
         List<MatchScore> scores = allCandidates.stream()
                 .filter(c -> c.getHiredAt() == null)
                 .filter(c -> c.getParsedSkills() != null && !c.getParsedSkills().isBlank())
-                .filter(c -> jobPosting.getShift() == null ||
-                             jobPosting.getShift().equalsIgnoreCase(c.getPreferredShift()))
-                .filter(c -> jobPosting.getLocation() == null ||
-                             jobPosting.getLocation().equalsIgnoreCase(c.getPreferredLocation()))
                 .map(candidate -> {
-                    double pct = calculateMatch(parseTags(candidate.getParsedSkills()), requiredTags);
+                    Set<String> candidateTags = parseTags(candidate.getParsedSkills());
+                    double skillPct = calculateMatch(candidateTags, requiredTags);
+                    double bonus    = preferenceBonus(candidate, jobPosting);
+                    double overall  = Math.min(skillPct + bonus, 100.0);
+
+                    boolean locMatched = jobPosting.getLocation() == null ||
+                            (candidate.getPreferredLocation() != null &&
+                             candidate.getPreferredLocation().equalsIgnoreCase(jobPosting.getLocation()));
+                    boolean shiftMatched = jobPosting.getShift() == null ||
+                            (candidate.getPreferredShift() != null &&
+                             candidate.getPreferredShift().equalsIgnoreCase(jobPosting.getShift()));
+
                     return MatchScore.builder()
                             .candidate(candidate)
                             .jobPosting(jobPosting)
-                            .matchPercentage(Math.min(pct, 100.0))
+                            .matchPercentage(overall)
+                            .skillMatchPct(skillPct)
+                            .locationMatched(locMatched)
+                            .shiftMatched(shiftMatched)
                             .build();
                 })
                 .filter(ms -> ms.getMatchPercentage() > 0)
+                .filter(ms -> requiredTags.isEmpty() || ms.getSkillMatchPct() > 0)
                 .sorted(Comparator.comparingDouble(MatchScore::getMatchPercentage).reversed())
                 .collect(Collectors.toList());
 
@@ -58,7 +71,9 @@ public class AtsScoreService {
 
         // Persist (clear old scores for this posting first)
         matchScoreRepository.deleteByJobPostingId(jobPosting.getId());
-        return matchScoreRepository.saveAll(scores);
+        List<MatchScore> savedScores = matchScoreRepository.saveAll(scores);
+        applicationService.ensureRecommendedForScores(savedScores, null, "ATS_SCORE");
+        return savedScores;
     }
 
     // Candidate-side: score one candidate against one job (no persistence)

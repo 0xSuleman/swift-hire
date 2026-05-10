@@ -26,6 +26,15 @@ public interface InterviewSlotRepository extends JpaRepository<InterviewSlot, Lo
            "AND s.status <> 'CANCELLED'")
     List<InterviewSlot> findOverlappingSlotsByEmployer(Long employerId, LocalDateTime start, LocalDateTime end);
 
+    // Cross-employer conflict detection: overlapping slots for a candidate across all employers
+    @Query("SELECT s FROM InterviewSlot s WHERE s.candidate.id = :candidateId " +
+           "AND s.startTime < :end AND s.endTime > :start " +
+           "AND s.status <> 'CANCELLED'")
+    List<InterviewSlot> findOverlappingSlotsByCandidate(
+        @Param("candidateId") Long candidateId,
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end);
+
     // For cron reminder job (UC-15): find slots where interview is approaching
     @Query("SELECT s FROM InterviewSlot s WHERE s.startTime BETWEEN :from AND :to " +
            "AND s.status IN ('PENDING', 'CONFIRMED')")

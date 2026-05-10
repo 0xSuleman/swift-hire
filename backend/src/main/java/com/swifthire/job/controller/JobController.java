@@ -31,8 +31,16 @@ public class JobController {
     @GetMapping("/{jobId}/candidates")
     public ResponseEntity<ApiResponse<Object>> getRecommendedCandidates(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long jobId) {
-        return ResponseEntity.ok(ApiResponse.ok(jobService.getRankedCandidates(userDetails.getUsername(), jobId)));
+            @PathVariable Long jobId,
+            @RequestParam(required = false) String skill,
+            @RequestParam(required = false) Double minAtsScore,
+            @RequestParam(required = false) Double minRating,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) String shift,
+            @RequestParam(required = false) String applicationStatus) {
+        return ResponseEntity.ok(ApiResponse.ok(jobService.getRankedCandidates(
+                userDetails.getUsername(), jobId, skill, minAtsScore, minRating,
+                location, shift, applicationStatus)));
     }
 
     // Get all job postings for employer
@@ -73,5 +81,25 @@ public class JobController {
             return ResponseEntity.ok(ApiResponse.ok("Job closed.", null));
         }
         return ResponseEntity.badRequest().body(ApiResponse.error("Unsupported status."));
+    }
+
+    // UC-03 extended: Get all matched candidates with their derived application status
+    @GetMapping("/{jobId}/application-statuses")
+    public ResponseEntity<ApiResponse<Object>> getApplicationStatuses(
+            @PathVariable Long jobId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.ok("OK",
+                jobService.getCandidateApplicationStatuses(userDetails.getUsername(), jobId)));
+    }
+
+    @PatchMapping("/{jobId}/applications/{candidateId}/status")
+    public ResponseEntity<ApiResponse<Object>> updateApplicationStatus(
+            @PathVariable Long jobId,
+            @PathVariable Long candidateId,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.ok("Application status updated.",
+                jobService.updateApplicationStatus(
+                        userDetails.getUsername(), jobId, candidateId, body.get("status"))));
     }
 }

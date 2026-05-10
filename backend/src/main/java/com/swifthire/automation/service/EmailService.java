@@ -2,7 +2,10 @@ package com.swifthire.automation.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swifthire.automation.model.NotificationLog;
+import com.swifthire.automation.repository.NotificationLogRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.retry.annotation.Backoff;
@@ -42,6 +45,9 @@ public class EmailService {
 
     private final HttpClient   httpClient   = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired
+    private NotificationLogRepository notificationLogRepository;
 
     @Value("${google.sender.email}")
     private String senderEmail;
@@ -151,11 +157,25 @@ public class EmailService {
     public boolean trySendInvitation(String toEmail, String name,
                                      LocalDateTime start, LocalDateTime end,
                                      String calendlyLink) {
+        NotificationLog notifLog = notificationLogRepository.save(
+                NotificationLog.builder()
+                        .recipientEmail(toEmail)
+                        .eventType("INVITATION")
+                        .status("PENDING")
+                        .build()
+        );
         try {
             buildAndSendInvitation(toEmail, name, start, end, calendlyLink);
+            notifLog.setStatus("SENT");
+            notificationLogRepository.save(notifLog);
             return true;
         } catch (Exception e) {
             log.error("Invitation email failed for {}: {}", toEmail, e.getMessage());
+            notifLog.setStatus("FAILED");
+            notifLog.setErrorMessage(e.getMessage() != null
+                    ? e.getMessage().substring(0, Math.min(e.getMessage().length(), 500))
+                    : "Unknown error");
+            notificationLogRepository.save(notifLog);
             return false;
         }
     }

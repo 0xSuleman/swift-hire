@@ -90,8 +90,10 @@ public class AnalyticsService {
 
         long totalSlots = 0;
         long acceptedSlots = 0;   // CONFIRMED + COMPLETED
-        long timeToHireSum = 0;
+        double timeToHireSum = 0;
         long timeToHireCount = 0;
+        double atsSum = 0;
+        long atsCount = 0;
 
         List<Map<String, Object>> perJob = new ArrayList<>();
 
@@ -112,20 +114,26 @@ public class AnalyticsService {
             totalSlots    += jobTotal;
             acceptedSlots += jobAccepted;
 
-            // Time-to-hire: days from job creation to earliest confirmed/completed slot
+            var jobScores = matchScoreRepository.findByJobPostingIdOrderByRankingAsc(job.getId());
+            double averageAts = jobScores.stream()
+                    .mapToDouble(com.swifthire.job.model.MatchScore::getMatchPercentage)
+                    .average()
+                    .orElse(0.0);
+            atsSum += jobScores.stream().mapToDouble(com.swifthire.job.model.MatchScore::getMatchPercentage).sum();
+            atsCount += jobScores.size();
+
+            // Time-to-hire: fractional days from job creation to earliest confirmed/completed slot
             var earliest = slots.stream()
                     .filter(s -> s.getStatus() == InterviewSlot.SlotStatus.CONFIRMED ||
                                  s.getStatus() == InterviewSlot.SlotStatus.COMPLETED)
                     .map(InterviewSlot::getStartTime)
                     .min(java.time.LocalDateTime::compareTo);
+            double jobTimeToHire = 0;
             if (earliest.isPresent()) {
-                timeToHireSum   += Math.max(0, Duration.between(job.getCreatedAt(), earliest.get()).toDays());
+                jobTimeToHire = Math.max(0, Duration.between(job.getCreatedAt(), earliest.get()).toMinutes() / 1440.0);
+                jobTimeToHire = Math.round(jobTimeToHire * 10) / 10.0;
+                timeToHireSum += jobTimeToHire;
                 timeToHireCount++;
-            }
-
-            long jobTimeToHire = 0;
-            if (earliest.isPresent()) {
-                jobTimeToHire = Math.max(0, Duration.between(job.getCreatedAt(), earliest.get()).toDays());
             }
 
             Map<String, Object> jobMap = new LinkedHashMap<>();
@@ -135,6 +143,8 @@ public class AnalyticsService {
             jobMap.put("totalSlots",     jobTotal);
             jobMap.put("acceptedSlots",  jobAccepted);
             jobMap.put("timeToHireDays", jobTimeToHire);
+            jobMap.put("averageAtsScore", Math.round(averageAts * 10.0) / 10.0);
+            jobMap.put("belowAtsThreshold", jobScores.stream().filter(ms -> ms.getMatchPercentage() < 50.0).count());
             perJob.add(jobMap);
         }
 
@@ -143,6 +153,9 @@ public class AnalyticsService {
                 : 0.0;
         double avgTimeToHire = timeToHireCount > 0
                 ? Math.round((double) timeToHireSum / timeToHireCount * 10) / 10.0
+                : 0.0;
+        double avgAtsScore = atsCount > 0
+                ? Math.round(atsSum / atsCount * 10) / 10.0
                 : 0.0;
 
         // Job status counts
@@ -161,6 +174,7 @@ public class AnalyticsService {
         result.put("totalInterviews",   totalSlots);
         result.put("acceptanceRate",    acceptanceRate);
         result.put("avgTimeToHireDays", avgTimeToHire);
+        result.put("averageAtsScore",   avgAtsScore);
         result.put("jobBreakdown",      perJob);
         result.put("jobStatusCounts",   jobStatusCounts);
         result.put("ratingsBreakdown",  buildRatingsBreakdown(user));

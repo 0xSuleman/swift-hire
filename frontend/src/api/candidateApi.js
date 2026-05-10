@@ -9,10 +9,11 @@ export const candidateApi = {
     return api.post('/candidate/cv', form, { headers: { 'Content-Type': 'multipart/form-data' } })
   },
   setPreferences:   (prefs)   => api.put('/candidate/preferences', prefs),
-  getJobPostings:   ()        => api.get('/candidate/job-postings'),
+  getJobPostings:   (params)  => api.get('/candidate/job-postings', { params }),
   getAnalytics:     ()        => api.get('/analytics/candidate'),
   getMyInterviews:  ()              => api.get('/schedule/my-interviews'),
   updateSlotStatus: (slotId, status) => api.patch(`/schedule/slots/${slotId}/status`, { status }),
   rateEmployer:     (data)          => api.post('/reviews/employer', data),
   getSlot:          (slotId)        => api.get(`/schedule/slots/${slotId}`),
+  getMyApplications: () => api.get('/candidate/applications'),
 }

@@ -30,11 +30,11 @@ public class CandidateController {
 
     // UC-08: Update basic profile info
     @PutMapping("/profile")
-    public ResponseEntity<ApiResponse<Void>> updateProfile(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateProfile(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody Map<String, String> updates) {
-        candidateService.updateProfile(userDetails.getUsername(), updates);
-        return ResponseEntity.ok(ApiResponse.ok("Profile updated successfully.", null));
+        return ResponseEntity.ok(ApiResponse.ok("Profile updated successfully.",
+                candidateService.updateProfile(userDetails.getUsername(), updates)));
     }
 
     // UC-09: Upload CV (PDF only, ≤10MB)
@@ -59,7 +59,20 @@ public class CandidateController {
     // UC-11: View filtered/ranked job postings
     @GetMapping("/job-postings")
     public ResponseEntity<ApiResponse<Object>> getJobPostings(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) String shift,
+            @RequestParam(required = false) Double minMatchScore,
+            @RequestParam(required = false) String skill) {
+        return ResponseEntity.ok(ApiResponse.ok(candidateService.getRecommendedJobs(
+                userDetails.getUsername(), location, shift, minMatchScore, skill)));
+    }
+
+    // UC-11 extended: View all matched jobs with derived application status
+    @GetMapping("/applications")
+    public ResponseEntity<ApiResponse<Object>> getMyApplications(
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(ApiResponse.ok(candidateService.getRecommendedJobs(userDetails.getUsername())));
+        return ResponseEntity.ok(ApiResponse.ok("OK",
+                candidateService.getMyApplications(userDetails.getUsername())));
     }
 }

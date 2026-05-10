@@ -4,10 +4,12 @@ import AppLayout from '../../components/common/AppLayout'
 import { FileText, Calendar, AlertCircle, Loader2, Download, History, ChevronDown, ChevronUp, Search } from 'lucide-react'
 
 const CATEGORIES = [
-  { value: 'users',     label: 'Users' },
-  { value: 'jobs',      label: 'Jobs' },
-  { value: 'ratings',   label: 'Ratings' },
-  { value: 'analytics', label: 'Analytics' },
+  { value: 'users', label: 'Users', description: 'Shows candidate and employer accounts with status, ratings, and activity totals.' },
+  { value: 'jobs', label: 'Jobs', description: 'Lists job postings with employer, location, shift, status, and posting dates.' },
+  { value: 'ratings', label: 'Ratings', description: 'Summarizes review counts, average ratings, and rating records in the selected range.' },
+  { value: 'ats', label: 'ATS', description: 'Reports platform ATS average, job averages, top candidates, and below-threshold matches.' },
+  { value: 'analytics', label: 'Analytics', description: 'Gives a high-level operational snapshot across users, jobs, interviews, reviews, and ATS.' },
+  { value: 'notifications', label: 'Notifications', description: 'Displays email invitation and reminder delivery logs with sent or failed status.' },
 ]
 
 const TODAY = new Date().toISOString().split('T')[0]
@@ -110,7 +112,7 @@ function HistoryRow({ entry }) {
 }
 
 export default function SystemReports() {
-  const [params, setParams]     = useState({ category: 'users', from: '', to: '', userType: '' })
+  const [params, setParams]     = useState({ category: 'users', from: '', to: '', userType: '', atsThreshold: 50 })
   const [report, setReport]     = useState(null)
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
@@ -119,6 +121,9 @@ export default function SystemReports() {
   const [historyFilter, setHistoryFilter] = useState('')
   const [historyLoading, setHistoryLoading] = useState(false)
   const [tableFilter, setTableFilter] = useState('')
+  const [notifLogs, setNotifLogs] = useState([])
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [notifGenerated, setNotifGenerated] = useState(false)
 
   const loadHistory = async () => {
     setHistoryLoading(true)
@@ -134,47 +139,71 @@ export default function SystemReports() {
 
   useEffect(() => { loadHistory() }, [])
 
+  useEffect(() => {
+    if (params.category !== 'notifications') return
+    setNotifLoading(true)
+    adminApi.getNotificationLogs()
+      .then(res => setNotifLogs(res.data.data ?? []))
+      .catch(() => setNotifLogs([]))
+      .finally(() => setNotifLoading(false))
+  }, [params.category])
+
   const filterRecords = (arr) =>
     tableFilter.trim()
       ? arr.filter(r => Object.values(r).some(v => String(v ?? '').toLowerCase().includes(tableFilter.toLowerCase())))
       : arr
 
-  const exportCsv = () => {
+  const exportCsv = async () => {
+    if (params.category === 'notifications') {
+      if (notifLogs.length === 0) { setError('No notification logs to export.'); return }
+      const headers = ['id', 'recipientEmail', 'eventType', 'status', 'sentAt', 'errorMessage']
+      const rows = notifLogs.map(log =>
+        headers.map(h => `"${String(log[h] ?? '').replace(/"/g, '""')}"`).join(',')
+      )
+      const csv = [headers.join(','), ...rows].join('\n')
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'report-notifications.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+      return
+    }
     if (!report) { setError('Generate a report first.'); return }
-    const sections = []
-    if (report.candidateRecords !== undefined) {
-      const rows = filterRecords(report.candidateRecords)
-      if (rows.length > 0) sections.push({ header: 'CANDIDATES', rows })
+    setExporting(true)
+    setError('')
+    try {
+      const res = await adminApi.exportReport(params)
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `report-${params.category}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not export report.')
+    } finally {
+      setExporting(false)
     }
-    if (report.employerRecords !== undefined) {
-      const rows = filterRecords(report.employerRecords)
-      if (rows.length > 0) sections.push({ header: 'EMPLOYERS', rows })
-    }
-    if (report.records !== undefined) {
-      const rows = filterRecords(report.records)
-      if (rows.length > 0) sections.push({ header: '', rows })
-    }
-    let csv = ''
-    sections.forEach(({ header, rows }, idx) => {
-      if (idx > 0) csv += '\n'
-      if (header) csv += header + '\n'
-      csv += Object.keys(rows[0]).join(',') + '\n'
-      rows.forEach(r => {
-        csv += Object.values(r).map(v => (v == null ? '' : String(v).replace(/,/g, ';'))).join(',') + '\n'
-      })
-    })
-    if (!csv) { setError('No records to export.'); return }
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `report-${params.category}${tableFilter ? '-filtered' : ''}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
   }
 
   const generate = async e => {
     e.preventDefault()
     setError('')
+
+    if (params.category === 'notifications') {
+      setNotifLoading(true)
+      try {
+        const res = await adminApi.getNotificationLogs()
+        setNotifLogs(res.data.data ?? [])
+        setNotifGenerated(true)
+      } catch {
+        setError('Could not load notification logs.')
+      } finally {
+        setNotifLoading(false)
+      }
+      return
+    }
 
     if (params.from && params.from > TODAY) {
       setError('The "From" date cannot be in the future.')
@@ -211,6 +240,7 @@ export default function SystemReports() {
 
   const summaryKeys = report ? Object.entries(report).filter(([, v]) => v !== null && typeof v !== 'object') : []
   const records     = report?.records  // used only by jobs report
+  const activeCategory = CATEGORIES.find(c => c.value === params.category)
 
   const filteredHistory = historyFilter
     ? history.filter(h => h.reportType === historyFilter)
@@ -250,7 +280,7 @@ export default function SystemReports() {
                   {CATEGORIES.map(({ value, label }) => {
                     const active = params.category === value
                     return (
-                      <button key={value} type="button" onClick={() => setParams(p => ({ ...p, category: value, userType: '' }))}
+                      <button key={value} type="button" onClick={() => { setParams(p => ({ ...p, category: value, userType: '' })); setReport(null); setError(''); setNotifGenerated(false) }}
                         style={{
                           padding: '7px 16px', borderRadius: 9999, fontSize: '0.82rem', fontWeight: 500,
                           border: `1px solid ${active ? 'rgba(46,229,176,0.4)' : 'rgba(255,255,255,0.07)'}`,
@@ -261,6 +291,14 @@ export default function SystemReports() {
                       </button>
                     )
                   })}
+                </div>
+                <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '0.7rem', color: '#4B5563', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Description
+                  </p>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#9CA3AF', lineHeight: 1.5 }}>
+                    {activeCategory?.description}
+                  </p>
                 </div>
               </div>
 
@@ -286,6 +324,20 @@ export default function SystemReports() {
                       )
                     })}
                   </div>
+                </div>
+              )}
+
+              {(params.category === 'ats' || params.category === 'analytics') && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: '#6B7280', fontWeight: 500, marginBottom: 8 }}>ATS Threshold</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={params.atsThreshold}
+                    onChange={e => setParams(p => ({ ...p, atsThreshold: Number(e.target.value) }))}
+                    style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, color: '#9CA3AF', padding: '8px 12px', fontSize: '0.82rem', outline: 'none', width: 120 }}
+                  />
                 </div>
               )}
 
@@ -374,6 +426,74 @@ export default function SystemReports() {
               {/* Flat records (jobs) */}
               {records !== undefined && (
                 <ReportSection label="" color="#6B7280" records={filterRecords(records)} />
+              )}
+
+              {report.topCandidates !== undefined && (
+                <ReportSection label="Top Candidates" color="#2EE5B0" records={filterRecords(report.topCandidates)} />
+              )}
+
+              {report.belowThresholdCandidates !== undefined && (
+                <ReportSection label="Below Threshold" color="#F59E0B" records={filterRecords(report.belowThresholdCandidates)} />
+              )}
+            </div>
+          )}
+
+          {/* Notifications panel */}
+          {params.category === 'notifications' && (
+            <div className="app-card" style={{ marginTop: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <p style={{ color: '#6B7280', fontSize: '0.82rem', margin: 0 }}>
+                  All email notification events — invitations and reminders.
+                </p>
+                {notifGenerated && notifLogs.length > 0 && (
+                  <button onClick={exportCsv}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', color: '#6B7280', fontSize: '0.75rem', cursor: 'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#9CA3AF'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}>
+                    <Download size={12} /> Export CSV
+                  </button>
+                )}
+              </div>
+              {notifLoading ? (
+                <div style={{ color: '#4B5563', fontSize: '0.85rem' }}>Loading...</div>
+              ) : notifLogs.length === 0 ? (
+                <div style={{ color: '#4B5563', fontSize: '0.85rem', textAlign: 'center', padding: '32px 0' }}>No notification logs yet.</div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #1F2937' }}>
+                        {['Recipient', 'Event', 'Status', 'Sent At', 'Error'].map(h => (
+                          <th key={h} style={{ textAlign: 'left', padding: '8px 10px', color: '#6B7280', fontWeight: 600 }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {notifLogs.map(log => (
+                        <tr key={log.id} style={{ borderBottom: '1px solid #111827' }}>
+                          <td style={{ padding: '8px 10px', color: '#9CA3AF' }}>{log.recipientEmail}</td>
+                          <td style={{ padding: '8px 10px', color: '#9CA3AF' }}>{log.eventType}</td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <span style={{
+                              padding: '2px 8px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600,
+                              background: log.status === 'SENT' ? '#2EE5B015' : log.status === 'FAILED' ? '#EF444415' : '#F59E0B15',
+                              color:      log.status === 'SENT' ? '#2EE5B0'   : log.status === 'FAILED' ? '#EF4444'   : '#F59E0B',
+                              border: `1px solid ${log.status === 'SENT' ? '#2EE5B030' : log.status === 'FAILED' ? '#EF444430' : '#F59E0B30'}`,
+                            }}>
+                              {log.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 10px', color: '#6B7280' }}>
+                            {log.sentAt ? new Date(log.sentAt).toLocaleString() : '—'}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: '#EF4444', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {log.errorMessage ?? '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}

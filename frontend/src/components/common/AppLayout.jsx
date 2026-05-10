@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
   LayoutDashboard, User, Briefcase, BarChart2,
-  Zap, Building2, Users, FileText, LogOut, CalendarDays, Menu, X,
+  Zap, Building2, Users, FileText, LogOut, CalendarDays, Menu, X, ClipboardList,
 } from 'lucide-react'
 
 const NAV = {
@@ -12,6 +12,7 @@ const NAV = {
     { to: '/candidate/profile',      label: 'My Profile',   Icon: User },
     { to: '/candidate/jobs',         label: 'Job Postings', Icon: Briefcase },
     { to: '/candidate/interviews',   label: 'Interviews',   Icon: CalendarDays },
+    { to: '/candidate/applications', label: 'Applications', Icon: ClipboardList },
     { to: '/candidate/analytics',    label: 'Analytics',    Icon: BarChart2 },
   ],
   EMPLOYER: [

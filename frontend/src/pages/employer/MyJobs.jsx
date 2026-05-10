@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { employerApi } from '../../api/employerApi'
 import AppLayout from '../../components/common/AppLayout'
-import { Loader2, RefreshCw, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react'
+import { Loader2, RefreshCw, CheckCircle2, AlertCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react'
 
 function Toast({ msg, type }) {
   if (!msg) return null
@@ -34,7 +34,7 @@ function Btn({ color, bg, border, onClick, children }) {
   return (
     <button
       onClick={onClick}
-      style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 500, color, background: bg, border: `1px solid ${border}`, cursor: 'pointer' }}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 500, color, background: bg, border: `1px solid ${border}`, cursor: 'pointer' }}
     >
       {children}
     </button>
@@ -48,6 +48,7 @@ export default function MyJobs() {
   const [toast, setToast]           = useState({ msg: '', type: 'ok' })
   const [confirmId, setConfirmId]   = useState(null)
   const [acting, setActing]         = useState(null)
+  const [expandedId, setExpandedId] = useState(null)
   const navigate = useNavigate()
 
   const notify = (msg, type = 'ok') => {
@@ -144,6 +145,7 @@ export default function MyJobs() {
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <th style={TH}>Job Title</th>
                 <th style={TH}>Status</th>
+                <th style={TH}>Average ATS</th>
                 <th style={TH}>Posted</th>
                 <th style={TH}>Actions</th>
               </tr>
@@ -156,7 +158,8 @@ export default function MyJobs() {
                 const date       = job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '—'
 
                 return (
-                  <tr key={job.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <Fragment key={job.id}>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                     <td style={{ ...TD, fontWeight: 500, color: '#E8EAF0' }}>{job.title}</td>
                     <td style={TD}>
                       <span style={{
@@ -167,6 +170,10 @@ export default function MyJobs() {
                         {job.status}
                       </span>
                     </td>
+                    <td style={{ ...TD, color: '#9CA3AF' }}>
+                      <span style={{ color: '#2EE5B0', fontWeight: 700 }}>{job.averageAtsScore ?? 0}%</span>
+                      <span style={{ color: '#4B5563', marginLeft: 6 }}>({job.candidateCount ?? 0})</span>
+                    </td>
                     <td style={{ ...TD, color: '#6B7280' }}>{date}</td>
                     <td style={TD}>
                       {isActing ? (
@@ -175,23 +182,26 @@ export default function MyJobs() {
                         <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <AlertTriangle size={14} style={{ color: '#F59E0B' }} />
                           <span style={{ fontSize: '0.78rem', color: '#9CA3AF' }}>Archive this job?</span>
-                          <Btn color="#FCA5A5" bg="rgba(239,68,68,0.08)" border="rgba(239,68,68,0.2)" onClick={() => handleArchive(job.id)}>Yes, archive</Btn>
+                          <Btn color="#F59E0B" bg="rgba(245,158,11,0.08)" border="rgba(245,158,11,0.2)" onClick={() => handleArchive(job.id)}>Yes, archive</Btn>
                           <Btn color="#6B7280" bg="transparent" border="rgba(107,114,128,0.2)" onClick={() => setConfirmId(null)}>Cancel</Btn>
                         </span>
                       ) : (
                         <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <Btn color="#9CA3AF" bg="rgba(255,255,255,0.04)" border="rgba(255,255,255,0.08)" onClick={() => setExpandedId(expandedId === job.id ? null : job.id)}>
+                            {expandedId === job.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />} Details
+                          </Btn>
                           {job.status === 'OPEN' && (
                             <Btn color="#818CF8" bg="rgba(129,140,248,0.08)" border="rgba(129,140,248,0.2)" onClick={() => navigate(`/employer/candidates/${job.id}`)}>
                               View Candidates
                             </Btn>
                           )}
                           {job.status === 'OPEN' && (
-                            <Btn color="#F59E0B" bg="rgba(245,158,11,0.08)" border="rgba(245,158,11,0.2)" onClick={() => handleClose(job.id)}>
+                            <Btn color="#FCA5A5" bg="rgba(239,68,68,0.08)" border="rgba(239,68,68,0.2)" onClick={() => handleClose(job.id)}>
                               Close
                             </Btn>
                           )}
                           {job.status !== 'ARCHIVED' && (
-                            <Btn color="#FCA5A5" bg="rgba(239,68,68,0.06)" border="rgba(239,68,68,0.15)" onClick={() => setConfirmId(job.id)}>
+                            <Btn color="#F59E0B" bg="rgba(245,158,11,0.08)" border="rgba(245,158,11,0.2)" onClick={() => setConfirmId(job.id)}>
                               Archive
                             </Btn>
                           )}
@@ -199,6 +209,39 @@ export default function MyJobs() {
                       )}
                     </td>
                   </tr>
+                  {expandedId === job.id && (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '0 16px 16px' }}>
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 14, display: 'grid', gridTemplateColumns: 'minmax(220px, 1.2fr) minmax(220px, 1fr)', gap: 18 }}>
+                          <div>
+                            <p style={{ margin: '0 0 6px', color: '#4B5563', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Prompt</p>
+                            <p style={{ margin: 0, color: '#9CA3AF', fontSize: '0.82rem', lineHeight: 1.6 }}>
+                              {job.rawPrompt || 'No prompt saved for this job.'}
+                            </p>
+                          </div>
+                          <div>
+                            <p style={{ margin: '0 0 8px', color: '#4B5563', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Parsed Result</p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                              {(job.parsedSkills || '').split(',').map(s => s.trim()).filter(Boolean).map(skill => (
+                                <span key={skill} style={{ padding: '2px 8px', borderRadius: 6, background: '#2EE5B015', border: '1px solid #2EE5B030', color: '#2EE5B0', fontSize: '0.72rem' }}>{skill}</span>
+                              ))}
+                              {!job.parsedSkills && <span style={{ color: '#4B5563', fontSize: '0.78rem' }}>No skills saved</span>}
+                            </div>
+                            <p style={{ margin: 0, color: '#6B7280', fontSize: '0.78rem' }}>
+                              Location: <span style={{ color: '#9CA3AF' }}>{job.parsedLocation || 'Not specified'}</span>
+                              {' · '}Shift: <span style={{ color: '#9CA3AF' }}>{job.parsedShift || 'Not specified'}</span>
+                              {' · '}Experience: <span style={{ color: '#9CA3AF' }}>{job.parsedExperienceYears != null ? `${job.parsedExperienceYears} years` : 'Not specified'}</span>
+                            </p>
+                            <p style={{ margin: '8px 0 0', color: '#6B7280', fontSize: '0.78rem' }}>
+                              Below 50% ATS: <span style={{ color: '#F59E0B' }}>{job.belowThresholdCount ?? 0}</span>
+                              {job.promptSubmittedAt && <span> · Submitted {new Date(job.promptSubmittedAt).toLocaleString()}</span>}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 )
               })}
             </tbody>

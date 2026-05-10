@@ -1,5 +1,7 @@
 package com.swifthire.review.service;
 
+import com.swifthire.application.model.ApplicationStatus;
+import com.swifthire.application.service.ApplicationService;
 import com.swifthire.common.exception.ResourceNotFoundException;
 import com.swifthire.review.model.Review;
 import com.swifthire.review.repository.ReviewRepository;
@@ -22,6 +24,7 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final InterviewSlotRepository slotRepository;
     private final UserRepository userRepository;
+    private final ApplicationService applicationService;
 
     // UC-05: Employer → Candidate
     @Transactional
@@ -40,6 +43,8 @@ public class ReviewService {
         User ratee = slot.getCandidate().getUser();
         saveReview(rater, ratee, slot, rating, comment);
         recalculateRating(ratee);
+        applicationService.changeStatus(slot.getCandidate(), slot.getJobPosting(),
+                ApplicationStatus.REVIEWED, raterEmail, "CANDIDATE_REVIEWED");
     }
 
     // UC-12: Candidate → Employer

@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { candidateApi } from '../../api/candidateApi'
+import { useAuth } from '../../context/AuthContext'
 import AppLayout from '../../components/common/AppLayout'
 import {
   User, Mail, Phone, MapPin, Upload, CheckCircle2,
   AlertCircle, Loader2, Eye, Briefcase, Sun, Moon, Monitor,
+  X, Plus, PenLine,
 } from 'lucide-react'
 
 const SHIFTS    = [{ v: '',      l: 'Any Shift' }, { v: 'DAY', l: 'Day' }, { v: 'NIGHT', l: 'Night' }]
@@ -40,11 +42,34 @@ function Section({ title, children }) {
   )
 }
 
+const splitSkills = (value) =>
+  (value || '').split(',').map(s => s.trim()).filter(Boolean)
+
+const inputStyle = {
+  background: '#0A0C0E',
+  border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: 10,
+  color: '#E8EAF0',
+  padding: '9px 12px 9px 38px',
+  fontSize: '0.85rem',
+  outline: 'none',
+  width: '100%',
+}
+
 export default function Profile() {
+  const { login } = useAuth()
+  const fieldRefs = useRef({})
+  const skillInputRef = useRef(null)
   const [profile, setProfile]   = useState(null)
   const [fetchError, setFetchError] = useState(false)
   const [file, setFile]         = useState(null)
   const [prefs, setPrefs]       = useState({ location: '', shift: '', workType: '' })
+  const [infoForm, setInfoForm] = useState({ name: '', email: '', phoneNo: '' })
+  const [editingFields, setEditingFields] = useState({})
+  const [savingField, setSavingField] = useState('')
+  const [skills, setSkills]     = useState([])
+  const [skillInput, setSkillInput] = useState('')
+  const [showSkillInput, setShowSkillInput] = useState(false)
   const [toast, setToast]       = useState({ msg: '', type: 'ok' })
   const [cvLoading, setCvLoading]     = useState(false)
   const [prefsLoading, setPrefsLoading] = useState(false)
@@ -59,6 +84,12 @@ export default function Profile() {
     candidateApi.getProfile()
       .then(res => {
         setProfile(res.data.data)
+        setInfoForm({
+          name: res.data.data.name || '',
+          email: res.data.data.email || '',
+          phoneNo: res.data.data.phoneNo || '',
+        })
+        setSkills(splitSkills(res.data.data.parsedSkills))
         setPrefs({
           location: res.data.data.preferredLocation || '',
           shift:    res.data.data.preferredShift    || '',
@@ -86,12 +117,109 @@ export default function Profile() {
       setFile(null)
       const res = await candidateApi.getProfile()
       setProfile(res.data.data)
+      setSkills(splitSkills(res.data.data.parsedSkills))
     } catch (err) {
       notify(err.response?.data?.message || 'Upload failed.', 'err')
     } finally {
       setCvLoading(false)
     }
   }
+
+  const applyProfileUpdateResponse = (res) => {
+    const data = res.data.data
+    if (data?.token && data?.user) {
+      login(data.user, data.token)
+    }
+    if (data?.profile) {
+      setProfile(data.profile)
+      setInfoForm({
+        name: data.profile.name || '',
+        email: data.profile.email || '',
+        phoneNo: data.profile.phoneNo || '',
+      })
+      setSkills(splitSkills(data.profile.parsedSkills))
+    }
+    return data?.profile
+  }
+
+  const beginEdit = (key) => {
+    setEditingFields(fields => ({ ...fields, [key]: true }))
+    window.setTimeout(() => fieldRefs.current[key]?.focus(), 0)
+  }
+
+  const saveProfileField = async (key) => {
+    if (!editingFields[key]) return
+    const nextValue = (infoForm[key] || '').trim()
+    const currentValue = (profile?.[key] || '').trim()
+    if (nextValue === currentValue) {
+      setEditingFields(fields => ({ ...fields, [key]: false }))
+      return
+    }
+    if ((key === 'name' || key === 'email') && !nextValue) {
+      notify(`${key === 'name' ? 'Name' : 'Email'} cannot be empty.`, 'err')
+      setInfoForm(form => ({ ...form, [key]: currentValue }))
+      setEditingFields(fields => ({ ...fields, [key]: false }))
+      return
+    }
+    setSavingField(key)
+    try {
+      const res = await candidateApi.updateProfile({ [key]: nextValue })
+      const savedProfile = applyProfileUpdateResponse(res)
+      if (!savedProfile) {
+        const fresh = await candidateApi.getProfile()
+        setProfile(fresh.data.data)
+        setInfoForm({
+          name: fresh.data.data.name || '',
+          email: fresh.data.data.email || '',
+          phoneNo: fresh.data.data.phoneNo || '',
+        })
+      }
+      notify('Profile updated.')
+    } catch (err) {
+      setInfoForm(form => ({ ...form, [key]: currentValue }))
+      notify(err.response?.data?.message || 'Failed to update profile.', 'err')
+    } finally {
+      setSavingField('')
+      setEditingFields(fields => ({ ...fields, [key]: false }))
+    }
+  }
+
+  const saveSkillsList = async (nextSkills) => {
+    const normalized = nextSkills.map(s => s.trim()).filter(Boolean)
+    setSkills(normalized)
+    try {
+      const res = await candidateApi.updateProfile({ parsedSkills: normalized.join(',') })
+      const savedProfile = applyProfileUpdateResponse(res)
+      if (!savedProfile) {
+        const fresh = await candidateApi.getProfile()
+        setProfile(fresh.data.data)
+        setSkills(splitSkills(fresh.data.data.parsedSkills))
+      }
+      notify('Skills updated.')
+    } catch (err) {
+      setSkills(splitSkills(profile?.parsedSkills))
+      notify(err.response?.data?.message || 'Failed to save skills.', 'err')
+    }
+  }
+
+  const addSkill = async () => {
+    const next = skillInput.trim()
+    if (!next) {
+      setShowSkillInput(false)
+      return
+    }
+    const nextSkills = skills.some(s => s.toLowerCase() === next.toLowerCase()) ? skills : [...skills, next]
+    setSkillInput('')
+    if (nextSkills !== skills) await saveSkillsList(nextSkills)
+    setShowSkillInput(false)
+  }
+
+  const openSkillInput = () => {
+    setShowSkillInput(true)
+    window.setTimeout(() => skillInputRef.current?.focus(), 0)
+  }
+
+  const removeSkill = (skill) => saveSkillsList(skills.filter(s => s !== skill))
 
   const savePrefs = async e => {
     e.preventDefault()
@@ -143,21 +271,56 @@ export default function Profile() {
 
           {/* Info card */}
           <Section title="Account Info">
-            {[
-              { Icon: User,  label: 'Name',  value: profile.name },
-              { Icon: Mail,  label: 'Email', value: profile.email },
-              { Icon: Phone, label: 'Phone', value: profile.phoneNo || '—' },
-            ].map(({ Icon, label, value }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon size={14} style={{ color: '#4B5563' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {[
+                { key: 'name', Icon: User, label: 'Name', type: 'text', placeholder: 'Your full name' },
+                { key: 'email', Icon: Mail, label: 'Email', type: 'email', placeholder: 'you@example.com' },
+                { key: 'phoneNo', Icon: Phone, label: 'Phone', type: 'tel', placeholder: '+92-300-0000000' },
+              ].map(({ key, Icon, label, type, placeholder }) => (
+                <div key={key}>
+                  <label style={{ display: 'block', fontSize: '0.7rem', color: '#4B5563', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
+                  <div style={{ position: 'relative' }}>
+                    <Icon size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#4B5563' }} />
+                    <input
+                      ref={node => { fieldRefs.current[key] = node }}
+                      type={type}
+                      readOnly={!editingFields[key] || savingField === key}
+                      value={infoForm[key]}
+                      placeholder={placeholder}
+                      onChange={e => setInfoForm(f => ({ ...f, [key]: e.target.value }))}
+                      onBlur={() => saveProfileField(key)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') e.currentTarget.blur()
+                      }}
+                      style={{
+                        ...inputStyle,
+                        paddingRight: 46,
+                        color: editingFields[key] ? '#E8EAF0' : '#9CA3AF',
+                        cursor: editingFields[key] ? 'text' : 'default',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => beginEdit(key)}
+                      disabled={savingField === key}
+                      title={`Edit ${label.toLowerCase()}`}
+                      style={{
+                        position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                        width: 30, height: 30, borderRadius: 8,
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        background: editingFields[key] ? 'rgba(46,229,176,0.08)' : 'rgba(255,255,255,0.04)',
+                        color: editingFields[key] ? '#2EE5B0' : '#6B7280',
+                        cursor: savingField === key ? 'default' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      {savingField === key ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <PenLine size={13} />}
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <p style={{ fontSize: '0.7rem', color: '#4B5563', margin: '0 0 1px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
-                  <p style={{ fontSize: '0.875rem', color: '#E8EAF0', margin: 0 }}>{value}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
             {/* Profile views stat */}
             <div style={{ marginTop: 18, padding: '12px 14px', borderRadius: 10, background: 'rgba(46,229,176,0.05)', border: '1px solid rgba(46,229,176,0.12)', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -169,24 +332,64 @@ export default function Profile() {
           </Section>
 
           {/* CV Upload */}
-          <Section title="CV">
-            {/* Parsed skills preview */}
-            {profile.parsedSkills ? (
-              <div style={{ marginBottom: 18 }}>
-                <p style={{ fontSize: '0.75rem', color: '#6B7280', marginBottom: 8 }}>Parsed skills from your CV:</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {profile.parsedSkills.split(',').filter(Boolean).map(skill => (
-                    <span key={skill} style={{ padding: '3px 10px', borderRadius: 9999, background: 'rgba(46,229,176,0.08)', border: '1px solid rgba(46,229,176,0.2)', color: '#2EE5B0', fontSize: '0.75rem', fontWeight: 500 }}>
-                      {skill.trim()}
+          <Section title="Add Skills">
+            <div style={{ marginBottom: 18 }}>
+              <p style={{ fontSize: '0.75rem', color: '#6B7280', margin: '0 0 10px', fontWeight: 600 }}>
+                Uploading a CV extracts your skills automatically for job matching.
+              </p>
+              {skills.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  {skills.map(skill => (
+                    <span key={skill} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 9px 3px 10px', borderRadius: 9999, background: 'rgba(46,229,176,0.08)', border: '1px solid rgba(46,229,176,0.2)', color: '#2EE5B0', fontSize: '0.75rem', fontWeight: 500 }}>
+                      {skill}
+                      <button type="button" onClick={() => removeSkill(skill)}
+                        style={{ display: 'flex', background: 'none', border: 'none', color: '#2EE5B0', cursor: 'pointer', padding: 0 }}>
+                        <X size={12} />
+                      </button>
                     </span>
                   ))}
                 </div>
+              ) : (
+                <p style={{ fontSize: '0.82rem', color: '#4B5563', margin: '0 0 12px' }}>
+                  No skills saved yet. Upload a PDF or add skills manually to enable job matching.
+                </p>
+              )}
+
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                {showSkillInput && (
+                  <input
+                    ref={skillInputRef}
+                    className="animate-skill-input-reveal"
+                    value={skillInput}
+                    placeholder="Add skill"
+                    onChange={e => setSkillInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addSkill()
+                      }
+                    }}
+                    onBlur={addSkill}
+                    style={{ background: '#0A0C0E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, color: '#E8EAF0', padding: '8px 12px', fontSize: '0.82rem', outline: 'none', flex: 1, transition: 'border-color 0.2s ease, box-shadow 0.2s ease' }}
+                  />
+                )}
+                <button
+                  type="button"
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={showSkillInput ? addSkill : openSkillInput}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10,
+                    background: showSkillInput ? 'rgba(46,229,176,0.13)' : 'rgba(46,229,176,0.08)',
+                    border: `1px solid ${showSkillInput ? 'rgba(46,229,176,0.32)' : 'rgba(46,229,176,0.2)'}`,
+                    color: '#2EE5B0', fontSize: '0.8rem', cursor: 'pointer',
+                    transform: showSkillInput ? 'translateX(0) scale(1.02)' : 'translateX(0) scale(1)',
+                    boxShadow: showSkillInput ? '0 0 18px rgba(46,229,176,0.08)' : 'none',
+                    transition: 'background 0.2s ease, border-color 0.2s ease, transform 0.18s ease, box-shadow 0.2s ease',
+                  }}>
+                  <Plus size={13} /> Add
+                </button>
               </div>
-            ) : (
-              <p style={{ fontSize: '0.82rem', color: '#4B5563', marginBottom: 16 }}>
-                No CV uploaded yet. Upload a PDF to enable job matching.
-              </p>
-            )}
+            </div>
 
             <form onSubmit={uploadCv}>
               {/* Drop zone */}

@@ -11,6 +11,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import com.swifthire.automation.model.NotificationLog;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -76,9 +78,10 @@ public class AdminController {
             @RequestParam String category,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
-            @RequestParam(required = false) String userType) {
+            @RequestParam(required = false) String userType,
+            @RequestParam(required = false) Double atsThreshold) {
         return ResponseEntity.ok(ApiResponse.ok(
-                adminService.generateReport(category, from, to, userType, userDetails.getUsername())));
+                adminService.generateReport(category, from, to, userType, atsThreshold, userDetails.getUsername())));
     }
 
     // UC-14 steps 13-14: Export report as CSV file download
@@ -88,8 +91,9 @@ public class AdminController {
             @RequestParam String category,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
-            @RequestParam(required = false) String userType) {
-        String csv = adminService.exportReportCsv(category, from, to, userType, userDetails.getUsername());
+            @RequestParam(required = false) String userType,
+            @RequestParam(required = false) Double atsThreshold) {
+        String csv = adminService.exportReportCsv(category, from, to, userType, atsThreshold, userDetails.getUsername());
         byte[] bytes = csv.getBytes();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("text/csv"));
@@ -117,13 +121,20 @@ public class AdminController {
 
     // UC-14: View history of generated reports (ACD: Admin Views GraphicalReport 1:0..*)
     @GetMapping("/reports/history")
-    public ResponseEntity<ApiResponse<Object>> getReportHistory() {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.getReportHistory()));
+    public ResponseEntity<ApiResponse<Object>> getReportHistory(
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getReportHistory(from, to)));
     }
 
     // Platform-wide analytics dashboard (no report history persistence)
     @GetMapping("/analytics")
     public ResponseEntity<ApiResponse<Object>> getAnalytics() {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getAdminAnalytics()));
+    }
+
+    @GetMapping("/notification-logs")
+    public ResponseEntity<ApiResponse<List<NotificationLog>>> getNotificationLogs() {
+        return ResponseEntity.ok(ApiResponse.ok("OK", adminService.getNotificationLogs()));
     }
 }

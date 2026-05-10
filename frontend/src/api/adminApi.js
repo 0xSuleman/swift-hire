@@ -9,9 +9,10 @@ export const adminApi = {
   getAuditLogs:      ()              => api.get('/admin/audit-logs'),
   deleteAuditLog:    (id)           => api.delete(`/admin/audit-logs/${id}`),
   deleteUser:        (userId)       => api.delete(`/admin/users/${userId}`),
-  getReportHistory:  ()             => api.get('/admin/reports/history'),
+  getReportHistory:  (params)       => api.get('/admin/reports/history', { params }),
   getAnalytics:      ()             => api.get('/admin/analytics'),
   getUserInterviews: (userId)       => api.get(`/admin/users/${userId}/interviews`),
   getUserReviews:    (userId)       => api.get(`/admin/users/${userId}/reviews`),
   getUserActivity:   (userId)       => api.get(`/admin/users/${userId}/activity`),
+  getNotificationLogs: () => api.get('/admin/notification-logs'),
 }
