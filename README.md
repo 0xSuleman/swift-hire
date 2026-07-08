@@ -1,8 +1,5 @@
 # Swift Hire
 
-**SE2004 — BSE-4A — Team 1 — Spring 2026**
-Supervisor: Dr. Ali Afzal Malik | Team Lead: Saad Mehmood [24L-3050]
-
 A dual-driven HR automation platform. Candidates upload CVs; employers type hiring prompts.
 The system auto-matches, ranks, schedules interviews, and sends reminders — no external AI API.
 
