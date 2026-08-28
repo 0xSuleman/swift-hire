@@ -1,5 +1,7 @@
 # Swift Hire
 
+> **Project context:** Swift Hire is a FAST-NUCES SE2004 Team 1 project, not a solo project. Contributor roles and the evidence-backed portfolio boundary are recorded in [ATTRIBUTION.md](ATTRIBUTION.md).
+
 A dual-driven HR automation platform. Candidates upload CVs; employers type hiring prompts.
 The system auto-matches, ranks, schedules interviews, and sends reminders — no external AI API.
 
